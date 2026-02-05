@@ -117,26 +117,36 @@ def main():
         
         # --- 업체 선택 기능 추가 ---
         with st.expander("🏭 업체 선택 (Target Vendor Selection)", expanded=True):
-            # 옵션 텍스트 생성 (예: "강화군농협 (보류: 5건)")
-            option_map = {}
-            display_options = []
+            # 업체 리스트 준비 (보류 데이터 정보 포함)
+            pending_counts = db_manager.get_pending_counts()
             
-            for name in nh_list:
-                # nh_list의 인덱스를 찾아야 함
-                idx = nh_list.index(name)
-                count = pending_counts.get(idx, 0)
-                
+            vendor_options = []
+            option_map = {} # 레이블 -> 실제 이름 매핑을 위해 추가
+            for i, name in enumerate(nh_list):
                 label = name
-                if count > 0:
-                    label = f"{name} (보류: {count}건)"
-                
-                option_map[label] = name
-                display_options.append(label)
+                if i in pending_counts and pending_counts[i] > 0:
+                    label = f"{name} (보류: {pending_counts[i]}건)"
+                vendor_options.append(label)
+                option_map[label] = name # 매핑 저장
 
+            # 세션 상태 초기화 (처음 한 번만 실행)
+            if 'selected_vendors_state' not in st.session_state:
+                st.session_state['selected_vendors_state'] = vendor_options
+
+            # 일괄 선택/해제 버튼
+            col1, col2, _ = st.columns([1, 1, 3])
+            with col1:
+                if st.button("✅ 전체 선택"):
+                    st.session_state['selected_vendors_state'] = vendor_options
+            with col2:
+                if st.button("❌ 전체 해제"):
+                    st.session_state['selected_vendors_state'] = []
+                    
+            # 멀티 셀렉트 위젯 (key를 사용하여 session_state와 연동)
             selected_labels = st.multiselect(
-                "변환할 업체를 선택하세요 (비워두면 모두 선택됩니다):",
-                options=display_options,
-                default=display_options, # 기본값: 모두 선택
+                "변환할 업체를 선택하세요:",
+                options=vendor_options,
+                key='selected_vendors_state',
                 help="체크 해제된 업체 데이터는 DB에 저장되었다가, 추후 선택 시 자동으로 합쳐집니다."
             )
             
@@ -326,6 +336,64 @@ def main():
             except Exception as e:
                 st.error(f"오류 발생: {e}")
                 st.exception(e) # 상세 오류 내용 출력
+    
+    # --- 보류 데이터 관리 및 초기화 섹션 ---
+    st.divider()
+    with st.expander("🗑️ 보류 데이터 관리 (Manage Pending Data)"):
+        # 현재 보류 데이터 다시 확인 (UI 업데이트 후 갱신된 정보가 필요할 수 있음)
+        current_pending_counts = db_manager.get_pending_counts()
+        
+        if not current_pending_counts:
+            st.info("현재 보류 중인 데이터가 없습니다.")
+        else:
+            st.write("초기화(삭제)할 업체를 선택하세요:")
+            
+            # 보류 데이터가 있는 업체만 필터링하여 옵션 생성
+            pending_options = []
+            pending_option_map = {}
+            
+            for idx, count in current_pending_counts.items():
+                if count > 0:
+                    name = nh_list[idx]
+                    label = f"{name} ({count}건)"
+                    pending_options.append(label)
+                    pending_option_map[label] = idx
+            
+            # 세션 상태 초기화 (보류 데이터 관리용)
+            if 'pending_delete_selection' not in st.session_state:
+                st.session_state['pending_delete_selection'] = []
+
+            # 일괄 선택/해제 버튼
+            p_col1, p_col2, _ = st.columns([1, 1, 3])
+            with p_col1:
+                if st.button("✅ 전체 선택", key="btn_select_all_pending"):
+                    st.session_state['pending_delete_selection'] = pending_options
+            with p_col2:
+                if st.button("❌ 전체 해제", key="btn_deselect_all_pending"):
+                    st.session_state['pending_delete_selection'] = []
+
+            # 삭제 대상 선택
+            selected_to_delete = st.multiselect(
+                "삭제할 업체 선택:",
+                options=pending_options,
+                key='pending_delete_selection',
+                help="선택한 업체의 보류 데이터가 영구적으로 삭제됩니다."
+            )
+            
+            if st.button("선택한 업체의 데이터 영구 삭제", type="primary"):
+                if not selected_to_delete:
+                    st.warning("삭제할 업체를 선택해주세요.")
+                else:
+                    deleted_count = 0
+                    for label in selected_to_delete:
+                        idx = pending_option_map[label]
+                        db_manager.delete_pending_data(idx)
+                        deleted_count += 1
+                        
+                    st.success(f"{deleted_count}개 업체의 보류 데이터가 삭제되었습니다.")
+                    import time
+                    time.sleep(1) # 사용자가 메시지를 볼 수 있게 잠시 대기
+                    st.rerun() # 페이지 새로고침하여 상태 반영
 
 if __name__ == "__main__":
     main()
