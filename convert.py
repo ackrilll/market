@@ -10,9 +10,11 @@ from map import (
     sort_data,
     get_constant_values,
     get_copy_map,
-    get_split_config
+    get_split_config,
+    nh_list
 )
 from customize_file import get_customize_config, apply_customization
+import db_manager  # DB 매니저 모듈 추가
 
 def create_excel_buffer(df, company_name):
     """엑셀 파일을 생성하고 스타일을 적용하여 바이너리 데이터를 반환하는 공통 함수"""
@@ -44,13 +46,9 @@ def create_excel_buffer(df, company_name):
 
 def create_sort_info_file(raw_df):
     """원본 데이터에 분류 정보를 추가한 엑셀 파일 생성"""
-    # map.py의 업체 리스트 (sort_data 함수와 동일)
-    nh_list = [
-        '강화군농협', '강화라이스', '관인농협', '담양', '당진시농협', '대명엠씨', '더끌림', '독정',
-        '무안군농협', '보성군농협', '석곡농협', '신김포농협', '안중농협', '양구군농협', '양구친환경',
-        '양구해안지점', '양평군농협', '연천', '영광군농협', '오덕쌀', '오병이어', '율목',
-        '이천남부농협', '동송농협', '청수굴비', '파주', '팔탄농협', '한국라이스텍'
-    ]
+    # map.py의 업체 리스트 사용 (import됨)
+    # nh_list is imported from map
+
 
     # 원본 데이터 복사
     df_with_sort = raw_df.copy()
@@ -113,7 +111,44 @@ def main():
         else:
             formatted_date = "날짜미상"
         
+        # DB 초기화 및 보류 건수 확인
+        db_manager.init_db()
+        pending_counts = db_manager.get_pending_counts()
+        
+        # --- 업체 선택 기능 추가 ---
+        with st.expander("🏭 업체 선택 (Target Vendor Selection)", expanded=True):
+            # 옵션 텍스트 생성 (예: "강화군농협 (보류: 5건)")
+            option_map = {}
+            display_options = []
+            
+            for name in nh_list:
+                # nh_list의 인덱스를 찾아야 함
+                idx = nh_list.index(name)
+                count = pending_counts.get(idx, 0)
+                
+                label = name
+                if count > 0:
+                    label = f"{name} (보류: {count}건)"
+                
+                option_map[label] = name
+                display_options.append(label)
+
+            selected_labels = st.multiselect(
+                "변환할 업체를 선택하세요 (비워두면 모두 선택됩니다):",
+                options=display_options,
+                default=display_options, # 기본값: 모두 선택
+                help="체크 해제된 업체 데이터는 DB에 저장되었다가, 추후 선택 시 자동으로 합쳐집니다."
+            )
+            
+            # 레이블 -> 실제 이름 변환
+            selected_vendors = [option_map[label] for label in selected_labels]
+        
+        # 아무것도 선택 안 하면 -> 모두 선택한 것으로 간주 (혹은 빈 리스트일 때 처리)
+        if not selected_vendors:
+            st.warning("선택된 업체가 없습니다. 변환 시 선택되지 않은 업체의 데이터는 모두 '보류' 상태로 저장됩니다.")
+        
         if st.button("🚀 변환 및 압축파일 생성"):
+            # 선택 여부와 관계없이 프로세스 시작 (저장만 하는 경우도 있으므로)
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
             OUTPUT_DIR = os.path.join(BASE_DIR, "data", "coverted")
             try:
@@ -123,8 +158,19 @@ def main():
                     st.toast(f"📁 폴더 생성됨: {OUTPUT_DIR}")
 
                 raw_df = pd.read_excel(uploaded_file)
+                
+                # 1. 원본 데이터 분류 (nh_id 부여) - 이제 모듈 내장 함수가 아니라 convert.py에서 호출
+                # sort_data 함수 내부에서 df에 nh_id를 부여함
                 sorted_data_list = sort_data(raw_df)
-
+                
+                # 원본 데이터프레임에는 nh_id가 없으므로(함수 내부 복사본에서만 작업), 
+                # 저장 로직을 위해 다시 한 번 원본에 id 매핑 (혹은 sort_data 리턴값 활용)
+                # sort_data가 리스트를 반환하므로, 이를 다시 하나의 DF로 합치거나 각각 처리해야 함.
+                # 보류 데이터 저장을 위해 '선택되지 않은' 업체들의 데이터를 수집
+                
+                # 전체 데이터를 순회하며 저장 vs 처리 분기
+                processed_files_count = 0
+                
                 zip_buffer = io.BytesIO()
 
                 with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -140,100 +186,142 @@ def main():
 
                     for idx, company_name, sorted_data in sorted_data_list:
                         
-                        # 설정 로드
-                        rename_map = get_ganghwagun_rename_map(idx)
-                        target_columns = get_ganghwagun_target_columns(idx)
-                        constant_map = get_constant_values(idx)
-                        copy_map = get_copy_map(idx)
-                        split_config = get_split_config(idx)
+                        # [분기 처리]
+                        if company_name not in selected_vendors:
+                            # A. 선택되지 않음 -> DB에 저장 (Deferred)
+                            if not sorted_data.empty:
+                                count = db_manager.save_deferred_data(sorted_data, [idx])
+                                if count > 0:
+                                    st.info(f"💾 {company_name}: {count}건 보류 저장됨")
+                            continue
                         
-                        # [오류 방지] 원본 데이터의 중복 컬럼 제거
-                        sorted_data = sorted_data.loc[:, ~sorted_data.columns.duplicated()].copy()
-                        
-                        # 2. 이름 변경 (중복 제거 포함)
-                        for old_col, new_col in rename_map.items():
-                            if new_col in sorted_data.columns and old_col != new_col:
-                                sorted_data = sorted_data.drop(columns=[new_col])
-                        
-                        renamed_df = sorted_data.rename(columns=rename_map)
-                        
-                        # 3. 필요한 컬럼 생성 (누락된 경우 빈 값으로 채움)
-                        for col in target_columns:
-                            if col not in renamed_df.columns:
-                                renamed_df[col] = ""
-                        
-                        # 생성 후 다시 한번 중복 컬럼 제거 (안전장치)
-                        renamed_df = renamed_df.loc[:, ~renamed_df.columns.duplicated()].copy()
-
-                        # 4. [날짜 유실 방지] 파일명 날짜 주입
-                        if '날짜' in renamed_df.columns:
-                            renamed_df['날짜'] = formatted_date
-
-                        # 5. 고정값(Hardcoding) 일괄 적용
-                        for col, value in constant_map.items():
-                            if col in renamed_df.columns:
-                                renamed_df[col] = value
-
-                        # 6. 컬럼 값 복제 (값 복사 시 .values를 사용하여 길이 오류 방지)
-                        for origin_col, new_col in copy_map.items():
-                            if origin_col in renamed_df.columns and new_col in renamed_df.columns:
-                                renamed_df[new_col] = renamed_df[origin_col].values
-
-                        # 최종 데이터프레임 확정
-                        full_df = renamed_df[target_columns].copy()
-
-                        # 6.5. 업체별 커스터마이징 적용
-                        customize_types = get_customize_config(idx)
-                        for customize_type in customize_types:
-                            full_df = apply_customization(full_df, idx, customize_type)
-
-                        # 7. 설정 기반 파일 분할 처리 (청수굴비 등)
-                        if split_config:
-                            end_a, start_b = split_config
-                            
-                            # 배송용 파일 (시작부터 end_a까지)
-                            df_delivery = full_df.loc[:, :end_a].copy()
-                            delivery_bytes = create_excel_buffer(df_delivery, company_name)
-                            delivery_filename = f"{idx}_{company_name}_롯데출력창.xlsx"
-                            
-                            zip_file.writestr(delivery_filename, delivery_bytes)
-                            
-                            # 로컬 저장
-                            with open(os.path.join(OUTPUT_DIR, delivery_filename), "wb") as f:
-                                f.write(delivery_bytes)
-                            
-                            # 정산용 파일 (start_b부터 끝까지)
-                            df_settlement = full_df.loc[:, start_b:].copy()
-                            settlement_bytes = create_excel_buffer(df_settlement, company_name)
-                            settlement_filename = f"{idx}_{company_name}_메일양식.xlsx"
-                            
-                            zip_file.writestr(settlement_filename, settlement_bytes)
-                            
-                            # 로컬 저장
-                            with open(os.path.join(OUTPUT_DIR, settlement_filename), "wb") as f:
-                                f.write(settlement_bytes)
                         else:
-                            # 일반 단일 파일 생성
-                            normal_bytes = create_excel_buffer(full_df, company_name)
-                            normal_filename = f"{idx}_{company_name}_양식.xlsx"
+                            # B. 선택됨 -> 처리 프로세스
                             
-                            zip_file.writestr(normal_filename, normal_bytes)
+                            # B-1. DB에서 기존 보류 데이터 로드
+                            pending_df = db_manager.load_pending_data(idx)
                             
-                            # 로컬 저장
-                            with open(os.path.join(OUTPUT_DIR, normal_filename), "wb") as f:
-                                f.write(normal_bytes)
+                            if not pending_df.empty:
+                                st.toast(f"📥 {company_name}: 보류 데이터 {len(pending_df)}건 로드 및 병합")
+                                # 병합 (새 데이터 + 보류 데이터)
+                                sorted_data = pd.concat([sorted_data, pending_df], ignore_index=True)
+                                
+                                # 중복 제거 로직 삭제 (사용자 요청: 중복 허용)
+                                # before_dedup = len(sorted_data)
+                                # sorted_data = sorted_data.drop_duplicates()
+                                # ...
+                            
+                            if sorted_data.empty:
+                                continue
+
+                            # 설정 로드
+                            rename_map = get_ganghwagun_rename_map(idx)
+                            target_columns = get_ganghwagun_target_columns(idx)
+                            constant_map = get_constant_values(idx)
+                            copy_map = get_copy_map(idx)
+                            split_config = get_split_config(idx)
+                            
+                            # ... (기존 변환 로직 계속) ...
+                            # [오류 방지] 원본 데이터의 중복 컬럼 제거
+                            sorted_data = sorted_data.loc[:, ~sorted_data.columns.duplicated()].copy()
+                            
+                            # 2. 이름 변경 (중복 제거 포함)
+                            for old_col, new_col in rename_map.items():
+                                if new_col in sorted_data.columns and old_col != new_col:
+                                    sorted_data = sorted_data.drop(columns=[new_col])
+                            
+                            renamed_df = sorted_data.rename(columns=rename_map)
+                            
+                            # 3. 필요한 컬럼 생성 (누락된 경우 빈 값으로 채움)
+                            for col in target_columns:
+                                if col not in renamed_df.columns:
+                                    renamed_df[col] = ""
+                            
+                            # 생성 후 다시 한번 중복 컬럼 제거 (안전장치)
+                            renamed_df = renamed_df.loc[:, ~renamed_df.columns.duplicated()].copy()
+
+                            # 4. [날짜 유실 방지] 파일명 날짜 주입 (보류 데이터에는 날짜가 이미 있을 수 있음)
+                            # 날짜 컬럼이 비어있는 행만 채우거나, 현재 파일 날짜로 덮어쓰거나 정책 결정 필요.
+                            # 여기서는 '현재 돌리는 시점'의 파일 날짜로 통일 (요청사항에 따름)
+                            if '날짜' in renamed_df.columns:
+                                # 기존 값이 없는 경우에만 채우거나, 덮어쓰기
+                                # renamed_df['날짜'] = renamed_df['날짜'].replace("", formatted_date) # 빈값만 채우기
+                                renamed_df['날짜'] = formatted_date # 일괄 적용 (기존 로직 유지)
+
+                            # 5. 고정값(Hardcoding) 일괄 적용
+                            for col, value in constant_map.items():
+                                if col in renamed_df.columns:
+                                    renamed_df[col] = value
+
+                            # 6. 컬럼 값 복제 (값 복사 시 .values를 사용하여 길이 오류 방지)
+                            for origin_col, new_col in copy_map.items():
+                                if origin_col in renamed_df.columns and new_col in renamed_df.columns:
+                                    renamed_df[new_col] = renamed_df[origin_col].values
+
+                            # 최종 데이터프레임 확정
+                            full_df = renamed_df[target_columns].copy()
+
+                            # 6.5. 업체별 커스터마이징 적용
+                            customize_types = get_customize_config(idx)
+                            for customize_type in customize_types:
+                                full_df = apply_customization(full_df, idx, customize_type)
+
+                            # 7. 설정 기반 파일 분할 처리 (청수굴비 등)
+                            if split_config:
+                                end_a, start_b = split_config
+                                
+                                # 배송용 파일 (시작부터 end_a까지)
+                                df_delivery = full_df.loc[:, :end_a].copy()
+                                delivery_bytes = create_excel_buffer(df_delivery, company_name)
+                                delivery_filename = f"{idx}_{company_name}_롯데출력창.xlsx"
+                                
+                                zip_file.writestr(delivery_filename, delivery_bytes)
+                                
+                                # 로컬 저장
+                                with open(os.path.join(OUTPUT_DIR, delivery_filename), "wb") as f:
+                                    f.write(delivery_bytes)
+                                
+                                # 정산용 파일 (start_b부터 끝까지)
+                                df_settlement = full_df.loc[:, start_b:].copy()
+                                settlement_bytes = create_excel_buffer(df_settlement, company_name)
+                                settlement_filename = f"{idx}_{company_name}_메일양식.xlsx"
+                                
+                                zip_file.writestr(settlement_filename, settlement_bytes)
+                                
+                                # 로컬 저장
+                                with open(os.path.join(OUTPUT_DIR, settlement_filename), "wb") as f:
+                                    f.write(settlement_bytes)
+                            else:
+                                # 일반 단일 파일 생성
+                                normal_bytes = create_excel_buffer(full_df, company_name)
+                                normal_filename = f"{idx}_{company_name}_양식.xlsx"
+                                
+                                zip_file.writestr(normal_filename, normal_bytes)
+                                
+                                # 로컬 저장
+                                with open(os.path.join(OUTPUT_DIR, normal_filename), "wb") as f:
+                                    f.write(normal_bytes)
+                            
+                            processed_files_count += 1
+                            
+                            # [완료 후 삭제] 처리가 끝났으므로 보류 데이터 삭제
+                            db_manager.delete_pending_data(idx)
 
                 # 최종 다운로드 버튼 생성
                 st.divider()
-                st.success(f"💾 모든 파일이 '{OUTPUT_DIR}' 경로에 저장되었습니다.")
-                st.subheader("✅ 변환 완료!")
-                st.download_button(
-                    label=f"🎁 {formatted_date} 결과물 다운로드 (ZIP)",
-                    data=zip_buffer.getvalue(),
-                    file_name=f"365_주문서_결과물_{formatted_date}.zip",
-                    mime="application/zip"
-                )
-                st.balloons()
+                
+                if processed_files_count > 0:
+                    st.success(f"💾 {processed_files_count}개 업체 파일 변환 완료! ('{OUTPUT_DIR}')")
+                    st.subheader("✅ 변환 완료!")
+                    st.download_button(
+                        label=f"🎁 {formatted_date} 결과물 다운로드 (ZIP)",
+                        data=zip_buffer.getvalue(),
+                        file_name=f"365_주문서_결과물_{formatted_date}.zip",
+                        mime="application/zip"
+                    )
+                    st.balloons()
+                else:
+                    st.info("⚠️ 생성된 파일이 없습니다. (선택된 업체에 데이터가 없거나 모두 보류 저장됨)")
 
             except Exception as e:
                 st.error(f"오류 발생: {e}")
