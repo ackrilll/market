@@ -11,9 +11,13 @@ from map import (
     get_constant_values,
     get_copy_map,
     get_split_config,
-    nh_list
+    nh_list,
+    get_nh_list,
 )
 from customize_file import get_customize_config, apply_customization
+from vendor_manager import render_vendor_tab
+from keyword_manager import render_keyword_tab
+from order_mapping import render_mapping_tab
 
 def create_excel_buffer(df, company_name):
     """엑셀 파일을 생성하고 스타일을 적용하여 바이너리 데이터를 반환하는 공통 함수"""
@@ -59,6 +63,7 @@ def create_text_buffer(df):
 
 def create_sort_info_file(raw_df):
     """원본 데이터에 분류 정보를 추가한 엑셀 파일 생성"""
+    current_nh_list = get_nh_list()
     # 원본 데이터 복사
     df_with_sort = raw_df.copy()
 
@@ -66,12 +71,12 @@ def create_sort_info_file(raw_df):
     df_with_sort['nh_id'] = -1
 
     # 업체명 매핑 (sort_data와 동일한 로직)
-    for i, name in enumerate(nh_list):
+    for i, name in enumerate(current_nh_list):
         df_with_sort.loc[df_with_sort['상품약어'].str.contains(name, na=False, regex=False), 'nh_id'] = i
 
     # sort_value 칼럼 생성
     df_with_sort['sort_value'] = df_with_sort['nh_id'].apply(
-        lambda x: nh_list[int(x)] if x != -1 else "분류되지 않음"
+        lambda x: current_nh_list[int(x)] if x != -1 and int(x) < len(current_nh_list) else "분류되지 않음"
     )
 
     # nh_id 칼럼 제거 (임시로만 사용)
@@ -185,41 +190,11 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
 
-# ──────────────────────────────────── 메인 앱 ────────────────────────────────────
+# ──────────────────────────────────── 주문서 변환 탭 ────────────────────────────────────
 
-def main():
-    st.set_page_config(
-        page_title="365 건강농산 주문서 변환기",
-        page_icon="🌾",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    inject_custom_css()
-    
-    # ── 사이드바: 시스템 정보 ──
-    with st.sidebar:
-        st.markdown("### 🌾 365 건강농산")
-        st.markdown("주문서 변환 시스템")
-        st.divider()
-        
-        # 등록 업체 수
-        st.markdown(f"""
-        <div class="sidebar-info">
-            📋 <strong>등록 업체</strong>: {len(nh_list)}개<br>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.divider()
-        st.caption("버전 2.0.0 · 2026-02-12")
-    
-    # ── 메인 헤더 ──
-    st.markdown("""
-    <div class="main-header">
-        <h1>🌾 365 건강농산 주문서 변환기</h1>
-        <p>사방넷 통합 주문내역을 업체별 양식으로 자동 변환합니다</p>
-    </div>
-    """, unsafe_allow_html=True)
+def render_convert_tab():
+    """주문서 변환 탭 UI를 렌더링합니다."""
+    current_nh_list = get_nh_list()
 
     uploaded_file = st.file_uploader(
         "📂 사방넷 통합 주문내역 엑셀 파일 (.xlsx)",
@@ -262,8 +237,8 @@ def main():
             
             # 우선 배치 업체 (관인농협, 오덕쌀, 영광군농협, 한국라이스텍)
             priority_names = ['관인농협', '오덕쌀', '영광군농협', '한국라이스텍']
-            priority_indices = [i for i, name in enumerate(nh_list) if name in priority_names]
-            other_indices = [i for i in range(len(nh_list)) if i not in priority_indices]
+            priority_indices = [i for i, name in enumerate(current_nh_list) if name in priority_names]
+            other_indices = [i for i in range(len(current_nh_list)) if i not in priority_indices]
             ordered_indices = priority_indices + other_indices
             
             # 전체 선택/해제 버튼
@@ -279,14 +254,14 @@ def main():
                         st.session_state[f'vendor_chk_{i}'] = False
                     st.rerun()
             with btn_col3:
-                st.caption(f"총 {len(nh_list)}개 업체 등록")
+                st.caption(f"총 {len(current_nh_list)}개 업체 등록")
             
             # 가로 체크박스 그리드 (5열)
             NUM_COLS = 5
             selected_vendors = []
             cols = st.columns(NUM_COLS)
             for col_idx, vendor_idx in enumerate(ordered_indices):
-                name = nh_list[vendor_idx]
+                name = current_nh_list[vendor_idx]
                 
                 # 세션 상태에 기본값이 없으면 True로 초기화
                 if f'vendor_chk_{vendor_idx}' not in st.session_state:
@@ -510,7 +485,65 @@ def main():
             except Exception as e:
                 st.error(f"치명적 오류 발생: {e}")
                 st.exception(e)
+
+
+# ──────────────────────────────────── 메인 앱 ────────────────────────────────────
+
+def main():
+    st.set_page_config(
+        page_title="365 건강농산 주문서 변환기",
+        page_icon="🌾",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
     
+    inject_custom_css()
+    
+    # ── 사이드바: 시스템 정보 ──
+    current_nh_list = get_nh_list()
+    with st.sidebar:
+        st.markdown("### 🌾 365 건강농산")
+        st.markdown("주문서 변환 시스템")
+        st.divider()
+        
+        # 등록 업체 수
+        st.markdown(f"""
+        <div class="sidebar-info">
+            📋 <strong>등록 업체</strong>: {len(current_nh_list)}개<br>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        st.caption("버전 3.0.0 · 2026-02-12")
+    
+    # ── 메인 헤더 ──
+    st.markdown("""
+    <div class="main-header">
+        <h1>🌾 365 건강농산 주문서 변환기</h1>
+        <p>사방넷 통합 주문내역을 업체별 양식으로 자동 변환합니다</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── 탭 구조 ──
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📋 주문서 변환",
+        "🏭 업체 관리",
+        "🏷️ 키워드 관리",
+        "🔄 주문 변환 매핑",
+    ])
+
+    with tab1:
+        render_convert_tab()
+    
+    with tab2:
+        render_vendor_tab()
+    
+    with tab3:
+        render_keyword_tab()
+    
+    with tab4:
+        render_mapping_tab()
+
 
 
 if __name__ == "__main__":

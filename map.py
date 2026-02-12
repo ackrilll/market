@@ -1,388 +1,306 @@
+"""
+업체별 매핑 설정 모듈 (map.py)
+
+외부 JSON 설정 파일(data/vendor_config.json)에서 업체별 매핑 정보를 로드합니다.
+새 업체 추가 시 JSON 파일만 편집하거나, CRUD 함수를 통해 동적으로 관리할 수 있습니다.
+"""
+import json
+import os
+import logging
+import shutil
+
+logger = logging.getLogger(__name__)
+
+# ──────────────────────────────────── 설정 로드 ────────────────────────────────────
+
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_CONFIG_PATH = os.path.join(_BASE_DIR, "data", "vendor_config.json")
+_FORM_DIR = os.path.join(_BASE_DIR, "data", "target_form")
+_config = None
+_vendor_map = {}  # id -> vendor dict 빠른 조회용
+
+
+def _load_config():
+    """JSON 설정 파일을 로드하고 캐싱합니다."""
+    global _config, _vendor_map, nh_list
+    if _config is not None:
+        return
+
+    try:
+        with open(_CONFIG_PATH, "r", encoding="utf-8") as f:
+            _config = json.load(f)
+    except FileNotFoundError:
+        logger.error(f"설정 파일을 찾을 수 없습니다: {_CONFIG_PATH}")
+        _config = {"vendors": [], "default_rename_map": {}, "default_target_columns": []}
+    except json.JSONDecodeError as e:
+        logger.error(f"설정 파일 JSON 파싱 오류: {e}")
+        _config = {"vendors": [], "default_rename_map": {}, "default_target_columns": []}
+
+    # id -> vendor dict 인덱스 구축
+    _vendor_map = {v["id"]: v for v in _config.get("vendors", [])}
+    # nh_list 동적 갱신
+    nh_list = [v["name"] for v in _config.get("vendors", [])]
+
+
+def _save_config():
+    """현재 설정을 JSON 파일에 저장합니다."""
+    try:
+        with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(_config, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"설정 파일 저장 실패: {e}")
+        raise
+
+
+def reload_config():
+    """설정 파일을 강제로 다시 로드합니다. (런타임 중 설정 변경 시 사용)"""
+    global _config
+    _config = None
+    _load_config()
+
+
+# 모듈 임포트 시 자동 로드
+_load_config()
+
+
+# ──────────────────────────────────── 업체 리스트 ────────────────────────────────────
+
+nh_list = [v["name"] for v in _config.get("vendors", [])]
+
+
+def get_nh_list():
+    """현재 등록된 업체명 리스트를 반환합니다. (동적 갱신 지원)"""
+    return [v["name"] for v in _config.get("vendors", [])]
+
+
+def get_all_vendors():
+    """모든 업체 설정을 리스트로 반환합니다."""
+    return list(_config.get("vendors", []))
+
+
+def get_vendor_by_id(vendor_id):
+    """ID로 업체 설정을 조회합니다."""
+    return _vendor_map.get(vendor_id)
+
+
+def get_vendor_by_name(name):
+    """이름으로 업체 설정을 조회합니다."""
+    for v in _config.get("vendors", []):
+        if v["name"] == name:
+            return v
+    return None
+
+
+# ──────────────────────────────────── 업체 CRUD ────────────────────────────────────
+
+def _next_vendor_id():
+    """사용 가능한 다음 업체 ID를 반환합니다."""
+    vendors = _config.get("vendors", [])
+    if not vendors:
+        return 0
+    return max(v["id"] for v in vendors) + 1
+
+
+def add_vendor_to_config(name, keywords, target_columns=None, rename_map=None,
+                         constant_values=None, copy_map=None, split_config=None,
+                         form_file=None):
+    """새 업체를 설정에 추가합니다.
+    
+    Args:
+        name: 업체명
+        keywords: 분류 키워드 리스트
+        target_columns: 대상 칼럼 리스트 (None이면 기본값 사용)
+        rename_map: 칼럼명 매핑 dict (None이면 빈 dict)
+        constant_values: 고정값 dict (None이면 빈 dict)
+        copy_map: 복사 매핑 dict (None이면 빈 dict)
+        split_config: 분할 설정 (None이면 없음)
+        form_file: 양식 파일명 (None이면 없음)
+    
+    Returns:
+        새로 생성된 업체의 ID
+        
+    Raises:
+        ValueError: 이미 존재하는 업체명인 경우
+    """
+    global nh_list
+    
+    # 중복 체크
+    if get_vendor_by_name(name) is not None:
+        raise ValueError(f"이미 존재하는 업체명입니다: {name}")
+    
+    new_id = _next_vendor_id()
+    vendor_data = {
+        "id": new_id,
+        "name": name,
+        "rename_map": rename_map or {},
+        "target_columns": target_columns or list(_config.get("default_target_columns", [])),
+        "constant_values": constant_values or {},
+        "copy_map": copy_map or {},
+        "split_config": split_config,
+        "keywords": keywords if keywords else [name],
+    }
+    if form_file:
+        vendor_data["form_file"] = form_file
+    
+    _config["vendors"].append(vendor_data)
+    _vendor_map[new_id] = vendor_data
+    nh_list = [v["name"] for v in _config.get("vendors", [])]
+    _save_config()
+    
+    return new_id
+
+
+def remove_vendor_from_config(vendor_id):
+    """업체를 설정에서 삭제합니다.
+    
+    Args:
+        vendor_id: 삭제할 업체 ID
+        
+    Raises:
+        ValueError: 존재하지 않는 업체 ID인 경우
+    """
+    global nh_list
+    
+    if vendor_id not in _vendor_map:
+        raise ValueError(f"존재하지 않는 업체 ID입니다: {vendor_id}")
+    
+    _config["vendors"] = [v for v in _config["vendors"] if v["id"] != vendor_id]
+    del _vendor_map[vendor_id]
+    nh_list = [v["name"] for v in _config.get("vendors", [])]
+    _save_config()
+
+
+def update_vendor_in_config(vendor_id, updates):
+    """업체 설정을 부분 수정합니다.
+    
+    Args:
+        vendor_id: 수정할 업체 ID
+        updates: 수정할 필드 dict (예: {"rename_map": {...}, "target_columns": [...]})
+        
+    Raises:
+        ValueError: 존재하지 않는 업체 ID인 경우
+    """
+    global nh_list
+    
+    vendor = _vendor_map.get(vendor_id)
+    if vendor is None:
+        raise ValueError(f"존재하지 않는 업체 ID입니다: {vendor_id}")
+    
+    # id는 수정 불가
+    updates.pop("id", None)
+    
+    vendor.update(updates)
+    
+    # vendors 리스트도 갱신
+    for i, v in enumerate(_config["vendors"]):
+        if v["id"] == vendor_id:
+            _config["vendors"][i] = vendor
+            break
+    
+    nh_list = [v["name"] for v in _config.get("vendors", [])]
+    _save_config()
+
+
+def update_vendor_keywords(vendor_id, keywords):
+    """업체의 키워드를 수정합니다.
+    
+    Args:
+        vendor_id: 업체 ID
+        keywords: 새 키워드 리스트
+        
+    Raises:
+        ValueError: 존재하지 않는 업체 ID이거나, 빈 키워드 리스트인 경우
+    """
+    if not keywords:
+        raise ValueError("키워드는 최소 1개 이상 필요합니다.")
+    update_vendor_in_config(vendor_id, {"keywords": keywords})
+
+
+# ──────────────────────────────────── 매핑 함수 ────────────────────────────────────
+
+def _get_vendor(idx):
+    """인덱스로 업체 설정을 조회합니다."""
+    return _vendor_map.get(idx)
+
+
 def get_ganghwagun_rename_map(idx):
     """사방넷 컬럼명을 대상 양식 컬럼명으로 매핑"""
-    #왼쪽이 샤방넷 양식 오른쪽이 목표양식
-    match idx:
-        case 0:
-            return {
-            }
-        case 1:
-            return {
-                '수령인': '받는분성명',
-                '구매자': '주문자성명',
-                '수령인 전화번호': '받는분전화번호',
-                '수령인 휴대폰': '받는분기타연락처',
-                '수령인주소': '받는분주소(전체, 분할)',
-                '상품약어': '품목명',
-                '배송메세지': '배송메세지1',
-            }
-        case 2:   
-            return {
-            }
-        case 3:
-            return {
-            }
-        case 4:
-            return {
-            }
-        case 5:
-            return {
-                '없음': '주문번호',
-                '상품약어': '상품명',
-                '수령인': '수령인명',
-                '수령인주소': '주소',
-                '배송메세지': '배송시 요구사항',
-                '구매자': '구매자명',
-            }
-        case 6:
-            return {
-            }
-        case 7:
-            return {
-                '수령인': '받는분',
-                '상품약어': '품명',
-                '수령인 전화번호': '전화번호',
-                '수령인 휴대폰': '전화번호2',
-                '수령인주소': '주소',
-                '구매자': '주문자',
-                '배송메세지': '특기사항',
-                '택배사(필수)': '택배사',
-                '송장번호(필수)': '운송장번호'
-            }
-        case 8:
-            return {
-            }
-        case 9:
-            return {
-                '상품약어': '제품명',
-                '구매자': '보낸분',
-                '구매자 휴대폰': '보낸분연락처',
-                '수령인': '받는분',
-                '수령인 전화번호': '받는분연락처1',
-                '수령인 휴대폰': '받는분연락처2',
-                '수령인주소': '받는분 주소',
-                '배송메세지': '배송요청사항'
-            }
-        case 10:
-            return {
-                '상품약어': '상품명',
-                '구매자': '주문자',
-                '수령인': '수취인',
-                '수령인주소': '주               소',
-                '수령인 전화번호': '전   화',
-                '송장번호(필수)': '송장번호'
-            }
-        case 11:
-            return {
-            }
-        case 12:
-            return {
-            }
-        case 13:
-            return {
-            }
-        case 14:
-            return {   
-            }
-        case 15:
-            return {
-            }
-        case 16:
-            return {
-            }
-        case 17:
-            return {
-            }
-        case 18:
-            return {
-            }
-        case 19:
-            return {
-            }
-        case 20:
-            return {
-            }
-        case 21:
-            return {
-            }
-        case 22:
-            return {
-                "구매자": "보내시는분",
-                "구매자 휴대폰": "보내시는분 전화",
-                "수령인": "받으시는분",
-                "수령인 전화번호": "받으시는 분 전화",
-                "수령인 휴대폰": "받는분핸드폰",
-                "수령인주소": "주                             소",
-                "상품약어": "품      목",
-                "배송메세지": "배송메시지(특기사항)"
-            }
-        case 23:
-            return {
-                "상품약어": "상품명(365건강농산)",
-                "수량": "상품수량",
-                "구매자": "주문자 성함",
-                "구매자 휴대폰": "주문자 전화",
-                "수령인": "수령자 성함",
-                "수령인 전화번호": "수령자 전화번호1",
-                "수령인 휴대폰": "수령자 전화번호2",
-                "우편번호": "수령자 우편번호",
-                "수령인주소": "수령자 주소",
-            }
-        case 24:
-            return {
-                "수령인": "받는사람",
-                "수령인 전화번호": "전화번호1",
-                "수령인 휴대폰": "전화번호2",
-                "수령인주소": "주   소",
-                "상품약어": "상품명",
-                "구매자": "보내는사람",
-                "구매자 휴대폰": "전화번호",
-                "배송메세지": "특기사항",
-                "우편번호": "우편번호(단가)",
-            }
-        case 25:   
-            return {
-            }   
-        case 26:
-            return {
-                '수령인 전화번호':' 받는분전화\n',
-                '수령인 휴대폰' : '3 받는분전화2',
-                '수령인주소':'받는분 주소(필수입력)',
-                '상품약어':'8  물품명',
-                '수량':' 수량',
-            }
-        case 27:
-            return {
-                '상품약어':'품목명',
-                '구매자':'주문자',
-                '수령인':'수령자',
-                "수령인 전화번호":'연락처',
-                "수령인주소":'주  소',
-                "배송메세지":'배송메세지1'
-            }
-        # return 
-        # ['주문', '출고', '품목명', '수량', '단가', '금액', '주문자', '추가배송비', '수령자', '연락처', 
-        # '주  소', '배송메세지1', '판매경로', '운송장번호', '주문번호', '품목 코드', '거래처코드']
-        # case _:
-        # return ['쇼핑몰', '주문번호', '수령인', '상품명', '옵션매핑', '노출옵션', '상품약어', '수량', 
-        #          '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', '배송메세지', '구매자', 
-        #          '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', 
-        #          '택배사코드(필수)', '취소접수일자', '취소완료일자']
-        case _:
-            return {
-                '수취인명': '수령인',
-                '상품약어': '상품약어', 
-                '수량': '수량',
-                '수취인전화번호': '수령인 전화번호',
-                '수취인휴대폰': '수령인 휴대폰',
-                '수취인우편번호': '우편번호',
-                '수취인주소': '수령인주소',
-                '배송메세지': '배송메세지',
-                '주문자명': '구매자',
-                '주문자휴대폰': '구매자 휴대폰',
-                '사방넷주문번호': '사방넷 주문번호(필수)',
-                '사방넷상품코드': '사방넷코드(필수)'
-            }
+    vendor = _get_vendor(idx)
+    if vendor is not None:
+        return dict(vendor.get("rename_map", {}))
+    # 등록되지 않은 인덱스 → 기본 매핑
+    return dict(_config.get("default_rename_map", {}))
+
+
 def get_copy_map(idx):
     """원본 컬럼의 값을 다른 컬럼명으로 복사해야 할 때 정의"""
-    match idx:
-        case 23:
-            return {
-                "수령자 주소": "주문자 주소" # 수령자 주소의 값을 주문자 주소 칸에도 복사
-            }
-        case 24:
-            return {
-                "받는사람": "이름",
-                "상품명": "상품명2",
-                "수량": "수량2"
-            }
-        case _:
-            return {}   
-        
-def get_date_map(idx,formatted_date):
+    vendor = _get_vendor(idx)
+    if vendor is not None:
+        return dict(vendor.get("copy_map", {}))
+    return {}
+
+
+def get_date_map(idx, formatted_date):
     """날짜 관련 고정값 매핑 (필요시)"""
-    match idx:
-        case 24:
-            return {
-                '날짜': formatted_date
-            }
-        case _:
-            return {}
+    # 현재는 idx 24(청수굴비)만 날짜 매핑이 필요
+    vendor = _get_vendor(idx)
+    if vendor and vendor.get("split_config"):
+        return {"날짜": formatted_date}
+    return {}
+
+
 def get_ganghwagun_target_columns(idx):
     """최종 엑셀에 들어갈 컬럼 순서 정의"""
-    match idx:
-        case 0:
-            return [
-                '주문번호(쇼핑몰)', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                '사방넷코드(필수)', '택배사코드(필수)']
-        case 1:
-            return ['받는분성명', '주문자성명', '받는분전화번호', '받는분기타연락처',
-                    '우편번호', '받는분주소(전체, 분할)', '박스수량', '품목명',
-                    '박스타입\n(10kg - 공란)\n(20kg - 중)', '배송메세지1']
-        case 2:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호',
-                    '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)',
-                    '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
+    vendor = _get_vendor(idx)
+    if vendor is not None:
+        return list(vendor.get("target_columns", []))
+    return list(_config.get("default_target_columns", []))
 
-        case 3:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰','우편번호', 
-                    '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', 
-                    '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
-        case 4:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', 
-                    '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', 
-                    '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
-        case 5:
-            return ['상품번호', '주문번호', '상품명', '주문일자', '수량', '수령인명', '수령인 휴대폰', 
-                    '수령인 전화번호', '우편번호', '주소', '배송시 요구사항', '구매자명', '고객번호', '송장번호']
-        case 6:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', 
-                    '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', 
-                    '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
-        case 7:
-            return ['받는분', '품명', '수량', '', '전화번호', '전화번호2', '주소', '주문자', '특기사항', '', '택배사', '', '운송장번호']
-        case 8:
-            return['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', 
-                   '우편번호', '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', 
-                   '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
-        case 9:
-            return ['제품명', '수량', '보낸분', '보낸분연락처', '받는분', '받는분연락처1', '받는분연락처2', 
-                    '받는분 주소', '우편번호', '배송요청사항', '보낸곳주소(송장번호)']
-        case 10:
-            return['상품명', '수량', '박스개수', '주문자', '수취인', '주               소', '전   화', '배송메세지', '송장번호']
-        case 11:
-            return ['주문번호(쇼핑몰)', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', 
-                    '수령인주소', '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', 
-                    '택배사(필수)', '사방넷코드(필수)', '택배사코드(필수)']
-        case 12:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 13:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 14:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 15:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 16:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 17:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 18:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 19:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 20:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 21:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 22:
-            return ['보내시는분', '보내시는분 전화', '보내는분담당자', '받으시는분', '받으시는 분 전화', '받는분핸드폰', 
-                    '우편번호', '주                             소', '수량', '품      목', '운임Type', '지불조건', 
-                    '제품번호', '배송메시지(특기사항)']
-        case 23:
-            return ['상품명(365건강농산)', '상품수량', '거래처', '주문자 성함', '주문자 전화', '주문자 주소', 
-                    '수령자 성함', '수령자 전화번호1', '수령자 전화번호2', '수령자 우편번호', '수령자 주소', '배송메세지']
-        case 24:
-            return ['받는사람', '전화번호1', '전화번호2', '주   소', '수량', '상품명', '보내는사람', '전화번호', 
-                    '특기사항', '우편번호(단가)', '날짜', '이름','상품명2','수량2', '정산금액']
-        case 25:
-            return ['번호', '수령인', '상품약어', '수량', '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', 
-                    '배송메세지', '구매자', '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', 
-                    '사방넷코드(필수)', '택배사코드(필수)']
-        case 26:
-            return ['수령인', ' 받는분전화\n', '3 받는분전화2', '우편번호', '받는분 주소(필수입력)', '6 받는분상세주소', 
-                    '7 물품유형\n01 컴퓨터류\n02 가전제품\n03 소형전자\n04 과일류\n05 육류\n06 비닐팩류\n07 일반식품\n08 농산물\n09 수산물\n10 김치류\n11 생활용품\n12 의류잡화\n13 서적문구\n14 귀금속\n15 가구류\n99 기타\n코드 또는 명칭입력', 
-                    '8  물품명', ' 수량', '10 중량(kg)\n\n쇼핑몰 입력', '11 물품가격(만원)', 
-                    '12 파손할증\n예 : 할증료 50%\n아니오 : 할증료 없음', '13 운임구분\n선불\n착불\n신용', '배송메세지', 
-                    '보내는분', '보내는분전화', '17 보내는분전화2', '18 보내는분우편번호', '19 보내는분주소', 
-                    '20 보내는분상세주소', '21 주문번호']
-        case 27:
-            return ['주문', '출고', '품목명', '수량', '단가', '금액', '주문자', '추가배송비', '수령자', '연락처', 
-                    '주  소', '배송메세지1', '판매경로', '운송장번호', '주문번호 ', '품목 코드', '거래처코드']
-        case _:
-            return ['쇼핑몰', '주문번호', '수령인', '상품명', '옵션매핑', '노출옵션', '상품약어', '수량', 
-                    '수령인 전화번호', '수령인 휴대폰', '우편번호', '수령인주소', '배송메세지', '구매자', 
-                    '구매자 휴대폰', '.', '사방넷 주문번호(필수)', '송장번호(필수)', '택배사(필수)', '사방넷코드(필수)', 
-                    '택배사코드(필수)', '취소접수일자', '취소완료일자']
+
 def get_constant_values(idx):
     """업체별로 고정적으로 들어가야 하는 값 정의"""
-    match idx:
-        
-        case 22: 
-            return {
-                '보내는분담당자': '365건강농산',
-            }
-        case 23: 
-            return {
-                '거래처': '365건강농산',
-            }
-        
-        case 26: 
-            return {
-                '보내는분': '팔탄농협RPC',
-                '19 보내는분주소': '경기 화성시 팔탄면 버들로 1637'
-            }
-        case 27:
-            return {
-                '거래처코드': '1238701787',
-            }
-        # 고정값이 필요 없는 업체는 빈 사전 반환
-        case _:
-            return {}
-        
+    vendor = _get_vendor(idx)
+    if vendor is not None:
+        return dict(vendor.get("constant_values", {}))
+    return {}
+
+
 def get_split_config(idx):
-    match idx:
-        case 24:
-            return ("우편번호(단가)", "날짜")
-        case _:
-            return None
-        
-# 업체 리스트 (전역 변수로 이동)
-nh_list = [
-    '강화군농협', '강화라이스', '관인농협', '담양', '당진시농협', '대명엠씨', '더끌림', '독정',
-    '무안군농협', '보성군농협', '석곡농협', '신김포농협', '안중농협', '양구군농협', '양구친환경',
-    '양구해안지점', '양평군농협', '연천', '영광군농협', '오덕쌀', '오병이어', '율목',
-    '이천남부농협', '동송농협', '청수굴비', '파주', '팔탄농협', '한국라이스텍'
-]
+    """파일 분할 설정 반환 (분할이 필요한 업체만 tuple 반환)"""
+    vendor = _get_vendor(idx)
+    if vendor is not None:
+        sc = vendor.get("split_config")
+        if sc and isinstance(sc, list) and len(sc) == 2:
+            return tuple(sc)
+    return None
+
+
+# ──────────────────────────────────── 분류 함수 ────────────────────────────────────
 
 def sort_data(df):
     """상품약어를 기준으로 업체별 ID를 부여하고 리스트로 반환"""
-    # nh_list는 이제 모듈 전역 변수를 사용함
+    current_nh_list = get_nh_list()
     
     # 1. 초기화
     df['nh_id'] = -1
-    
-    # 2. 업체명 매핑 (regex=False로 괄호 포함 문자열 에러 방지)
-    for i, name in enumerate(nh_list):
-        df.loc[df['상품약어'].str.contains(name, na=False, regex=False), 'nh_id'] = i
-    
+
+    # 2. 키워드 기반 업체 매핑
+    vendors = get_all_vendors()
+    for vendor in vendors:
+        vid = vendor["id"]
+        keywords = vendor.get("keywords", [vendor["name"]])
+        for keyword in keywords:
+            df.loc[df['상품약어'].str.contains(keyword, na=False, regex=False), 'nh_id'] = vid
+
     # 3. 데이터가 존재하는 ID만 추출하여 리스트 생성
     sorted_df_list = []
     valid_ids = df[df['nh_id'] != -1]['nh_id'].unique()
     valid_ids.sort()
-    
+
     for i in valid_ids:
-        subset = df[df['nh_id'] == i].copy()
-        # (인덱스, 업체명, 데이터프레임) 순으로 튜플 저장
-        sorted_df_list.append((int(i), nh_list[int(i)], subset))
-        
+        vendor = get_vendor_by_id(int(i))
+        if vendor:
+            subset = df[df['nh_id'] == i].copy()
+            sorted_df_list.append((int(i), vendor["name"], subset))
+
     return sorted_df_list
