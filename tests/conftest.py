@@ -6,9 +6,67 @@ import pytest
 import pandas as pd
 import os
 import sys
+import copy
+from unittest.mock import patch
 
 # 프로젝트 루트를 sys.path에 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import map as map_module
+
+
+@pytest.fixture
+def mock_save_config():
+    """_save_config를 mock하여 실제 파일 저장을 방지합니다."""
+    with patch.object(map_module, '_save_config') as mock_save:
+        yield mock_save
+
+
+@pytest.fixture
+def setup_test_vendors(mock_save_config):
+    """CRUD 테스트용 초기 상태를 설정하고, 테스트 후 원래 상태로 복원합니다."""
+    # 원래 상태를 백업
+    original_config = copy.deepcopy(map_module._config)
+    original_vendor_map = copy.deepcopy(map_module._vendor_map)
+    original_nh_list = list(map_module.nh_list)
+
+    # 테스트용 최소 설정으로 교체
+    test_config = {
+        "default_rename_map": {"수취인명": "수령인", "상품약어": "상품약어"},
+        "default_target_columns": ["수령인", "상품약어", "수량"],
+        "vendors": [
+            {
+                "id": 0,
+                "name": "테스트업체A",
+                "rename_map": {},
+                "target_columns": ["수령인", "상품약어", "수량"],
+                "constant_values": {},
+                "copy_map": {},
+                "split_config": None,
+                "keywords": ["테스트A"]
+            },
+            {
+                "id": 1,
+                "name": "테스트업체B",
+                "rename_map": {"수령인": "받는분"},
+                "target_columns": ["받는분", "상품약어", "수량"],
+                "constant_values": {"거래처": "365건강농산"},
+                "copy_map": {},
+                "split_config": None,
+                "keywords": ["테스트B"]
+            }
+        ]
+    }
+    map_module._config = test_config
+    map_module._vendor_map = {v["id"]: v for v in test_config["vendors"]}
+    map_module.nh_list = [v["name"] for v in test_config["vendors"]]
+
+    yield mock_save_config  # mock_save_config 객체를 전달하여 호출 여부 검증 가능
+
+    # 복원
+    map_module._config = original_config
+    map_module._vendor_map = original_vendor_map
+    map_module.nh_list = original_nh_list
 
 
 @pytest.fixture

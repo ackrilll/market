@@ -1,6 +1,6 @@
 # 365 건강농산 주문서 변환기 — 프로젝트 명세서 (Statement)
 
-> **마지막 갱신일**: 2026-02-12 (Phase 10 반영)  
+> **마지막 갱신일**: 2026-02-12 (Phase 11 CRUD 테스트 반영)  
 > **프로젝트 저장소**: `c:\Users\skawl\PycharmProjects\365배포`
 
 ---
@@ -55,8 +55,8 @@
 | `실행하기.bat` | 71 | 포터블 Python 자동 감지 → 패키지 설치 → Streamlit 서버 실행 | ✅ 구현 완료 |
 | `requirements.txt` | 4 | 의존성: streamlit, pandas, openpyxl | ✅ 최신 |
 | `readme.txt` | 6 | 간단한 실행 가이드 | ✅ 존재 |
-| `tests/conftest.py` | 70 | 테스트 공통 fixture (샘플 데이터) | ✅ 구현 완료 |
-| `tests/test_map.py` | 170 | `map.py` 단위 테스트 (19개 테스트) | ✅ 구현 완료 |
+| `tests/conftest.py` | 120 | 테스트 공통 fixture (샘플 데이터 + CRUD 테스트용 mock/setup) | ✅ 구현 완료 |
+| `tests/test_map.py` | 290 | `map.py` 단위 테스트 (38개: 기존 19 + CRUD 19) | ✅ 구현 완료 |
 | `tests/test_convert.py` | 100 | `convert.py` 헬퍼 함수 테스트 (10개 테스트) | ✅ 구현 완료 |
 | `tests/test_phase7_8.py` | 155 | Phase 7~8 기능 테스트 (16개: TSV/시트보호/정렬/해시/우선배치) | ✅ 구현 완료 |
 
@@ -323,7 +323,7 @@
 |-------|------|------|
 | 1 | 폴더명 오타 + read.py 정리 | ✅ 완료 |
 | 2 | 에러 핸들링 강화 | ✅ 완료 |
-| 3 | 단위 테스트 48개 | ✅ 완료 |
+| 3 | 단위 테스트 (최종 57개) | ✅ 완료 |
 | 4 | map.py JSON 외부화 | ✅ 완료 |
 | 5 | UI/UX 전면 개선 | ✅ 완료 |
 | UAT | 사람 vs 프로그램 비교 분석 | ✅ 완료 |
@@ -350,7 +350,7 @@
 
 | 항목 | 상태 | 담당 | 비고 |
 |------|------|------|------|
-| Phase 10 CRUD 단위 테스트 | 🔲 미착수 | `/tester` | `map.py`의 `add/remove/update_vendor` 함수 테스트 |
+| Phase 10 CRUD 단위 테스트 | ✅ 완료 | `/tester` | 19개 테스트: add(8) + remove(4) + update(4) + keywords(3). 38개 전체 통과 |
 | 키워드 기반 분류 테스트 | 🔲 미착수 | `/tester` | 다중 키워드 매핑 정확도 검증 |
 | 업체 관리 탭 E2E 테스트 | 🔲 미착수 | `/tester` | 업체 추가→키워드 설정→변환 파이프라인 통합 흐름 |
 | `statement.md` 데이터 흐름도 갱신 | 🔲 미착수 | `/architect` | 보류 시스템 제거 반영, 탭 구조 반영 |
@@ -395,3 +395,4 @@
 | 2026-02-09 | **v2.0 배포**: `365_배포용/` 폴더 생성 (포터블 Python + 앱 파일 + 실행가이드) |
 | 2026-02-12 | Phase 9: 주문 누적(보류) 시스템 제거. `db_manager.py` 삭제, `convert.py`에서 보류 관련 ~140줄 제거, `test_db_manager.py` 삭제. 45개 테스트 전체 통과 |
 | 2026-02-12 | Phase 10: 업체관리/키워드관리/주문변환매핑 탭 추가. `vendor_manager.py`, `keyword_manager.py`, `order_mapping.py` 신규 생성, `map.py` CRUD 함수 추가(306줄), `convert.py` 4탭 구조 전환(550줄), `mapping_config.json` 생성. 브라우저 4탭 정상 검증 |
+| 2026-02-12 | Phase 11 CRUD 테스트: `map.py`의 `add/remove/update_vendor_to_config`, `update_vendor_keywords` 4개 함수에 대한 단위 테스트 19개 추가. `conftest.py`에 mock fixture 추가. 전체 38개 테스트 통과 |
