@@ -59,6 +59,12 @@ def reload_config():
     _load_config()
 
 
+def _ensure_config():
+    """_config가 None이면 자동으로 로드합니다. (레이스 컨디션 방지)"""
+    if _config is None:
+        _load_config()
+
+
 # 모듈 임포트 시 자동 로드
 _load_config()
 
@@ -70,11 +76,13 @@ nh_list = [v["name"] for v in _config.get("vendors", [])]
 
 def get_nh_list():
     """현재 등록된 업체명 리스트를 반환합니다. (동적 갱신 지원)"""
+    _ensure_config()
     return [v["name"] for v in _config.get("vendors", [])]
 
 
 def get_all_vendors():
     """모든 업체 설정을 리스트로 반환합니다."""
+    _ensure_config()
     return list(_config.get("vendors", []))
 
 
@@ -85,6 +93,7 @@ def get_vendor_by_id(vendor_id):
 
 def get_vendor_by_name(name):
     """이름으로 업체 설정을 조회합니다."""
+    _ensure_config()
     for v in _config.get("vendors", []):
         if v["name"] == name:
             return v
@@ -95,6 +104,7 @@ def get_vendor_by_name(name):
 
 def _next_vendor_id():
     """사용 가능한 다음 업체 ID를 반환합니다."""
+    _ensure_config()
     vendors = _config.get("vendors", [])
     if not vendors:
         return 0
@@ -220,6 +230,7 @@ def update_vendor_keywords(vendor_id, keywords):
 
 def _get_vendor(idx):
     """인덱스로 업체 설정을 조회합니다."""
+    _ensure_config()
     return _vendor_map.get(idx)
 
 
@@ -229,6 +240,7 @@ def get_ganghwagun_rename_map(idx):
     if vendor is not None:
         return dict(vendor.get("rename_map", {}))
     # 등록되지 않은 인덱스 → 기본 매핑
+    _ensure_config()
     return dict(_config.get("default_rename_map", {}))
 
 
@@ -254,6 +266,7 @@ def get_ganghwagun_target_columns(idx):
     vendor = _get_vendor(idx)
     if vendor is not None:
         return list(vendor.get("target_columns", []))
+    _ensure_config()
     return list(_config.get("default_target_columns", []))
 
 
