@@ -133,38 +133,36 @@ def render_mapping_tab():
         key="mapping_mode"
     )
 
-    # ── 4. 좌우 양식 비교 뷰 ──
-    st.markdown("### 📊 양식 비교")
-    left_col, right_col = st.columns(2)
-
-    with left_col:
-        st.markdown(f"**📄 원본 주문서: {source_name}**")
-        st.dataframe(source_df.head(5), use_container_width=True, height=200)
-        st.caption(f"칼럼 {len(source_columns)}개: {', '.join(source_columns[:10])}{'...' if len(source_columns) > 10 else ''}")
-
-    with right_col:
-        st.markdown(f"**📄 {selected_vendor} 양식**")
-        if vendor_form_df is not None:
-            st.dataframe(vendor_form_df.head(5), use_container_width=True, height=200)
-        else:
-            # 칼럼명만 표시
-            col_df = pd.DataFrame(columns=vendor_columns)
-            st.dataframe(col_df, use_container_width=True, height=200)
-        st.caption(f"칼럼 {len(vendor_columns)}개: {', '.join(str(c) for c in vendor_columns[:10])}{'...' if len(vendor_columns) > 10 else ''}")
-
-    st.divider()
-
-    # ── 5. 모드별 UI ──
+    # ── 4. 모드별 UI ──
     if "📋 분류 기준 칼럼 선택" in mode:
         _render_classification_mode(source_name, source_columns)
     else:
+        # 칼럼 매핑 모드 — 좌우 양식 비교 뷰 표시
+        st.markdown("### 📊 양식 비교")
+        left_col, right_col = st.columns(2)
+
+        with left_col:
+            st.markdown(f"**📄 원본 주문서: {source_name}**")
+            st.dataframe(source_df.head(5), use_container_width=True, height=200)
+            st.caption(f"칼럼 {len(source_columns)}개: {', '.join(source_columns[:10])}{'...' if len(source_columns) > 10 else ''}")
+
+        with right_col:
+            st.markdown(f"**📄 {selected_vendor} 양식**")
+            if vendor_form_df is not None:
+                st.dataframe(vendor_form_df.head(5), use_container_width=True, height=200)
+            else:
+                col_df = pd.DataFrame(columns=vendor_columns)
+                st.dataframe(col_df, use_container_width=True, height=200)
+            st.caption(f"칼럼 {len(vendor_columns)}개: {', '.join(str(c) for c in vendor_columns[:10])}{'...' if len(vendor_columns) > 10 else ''}")
+
+        st.divider()
         _render_mapping_mode(source_name, source_columns, selected_vendor, vendor, vendor_columns)
 
 
 def _render_classification_mode(source_name, source_columns):
-    """분류 기준 칼럼 선택 모드 UI"""
+    """분류 기준 칼럼 선택 모드 UI — 원본 파일 칼럼만 표시, 클릭으로 선택"""
     st.markdown("### 🎯 분류 기준 칼럼 선택")
-    st.caption("원본 주문서에서 업체를 분류할 때 사용할 칼럼을 선택하세요. "
+    st.caption("원본 주문서의 칼럼 중 업체 분류에 사용할 칼럼을 **클릭**하세요. "
                "이 칼럼의 값에 업체 키워드가 포함되어 있으면 해당 업체로 분류됩니다.")
 
     # 현재 설정 로드
@@ -172,14 +170,36 @@ def _render_classification_mode(source_name, source_columns):
     source_config = mapping_config.get("source_types", {}).get(source_name, {})
     current_classification_col = source_config.get("classification_column", "")
 
-    selected_col = st.selectbox(
-        "분류 기준 칼럼",
-        options=["(선택하세요)"] + source_columns,
-        index=source_columns.index(current_classification_col) + 1 if current_classification_col in source_columns else 0,
-        key="classification_column_select"
-    )
+    # 세션 상태에 선택된 칼럼 저장
+    session_key = f"selected_class_col_{source_name}"
+    if session_key not in st.session_state:
+        st.session_state[session_key] = current_classification_col
 
-    if selected_col and selected_col != "(선택하세요)":
+    selected_col = st.session_state[session_key]
+
+    # ── 칼럼 버튼 그리드 (원본파일 칼럼만 표시, 데이터 없음) ──
+    st.markdown("**📄 원본 주문서 칼럼** — 칼럼을 클릭하여 분류 기준을 선택하세요")
+
+    # 5열 그리드로 칼럼 버튼 배치
+    cols_per_row = 5
+    for row_start in range(0, len(source_columns), cols_per_row):
+        row_cols = st.columns(cols_per_row)
+        for i, col in enumerate(source_columns[row_start:row_start + cols_per_row]):
+            with row_cols[i]:
+                is_selected = (col == selected_col)
+                btn_type = "primary" if is_selected else "secondary"
+                label = f"✅ {col}" if is_selected else col
+                if st.button(
+                    label,
+                    key=f"class_col_{source_name}_{row_start + i}",
+                    type=btn_type,
+                    use_container_width=True,
+                ):
+                    st.session_state[session_key] = col
+                    st.rerun()
+
+    # ── 선택 결과 표시 + 저장 ──
+    if selected_col:
         st.success(f"✅ '{selected_col}' 칼럼이 분류 기준으로 선택되었습니다.")
         st.caption(f"예: '{selected_col}' 칼럼 값에 '강화'가 포함되면 → 강화군농협으로 분류")
 
@@ -189,6 +209,8 @@ def _render_classification_mode(source_name, source_columns):
             mapping_config["source_types"][source_name]["classification_column"] = selected_col
             _save_mapping_config(mapping_config)
             st.success(f"✅ '{source_name}'의 분류 기준 칼럼이 '{selected_col}'로 저장되었습니다.")
+    else:
+        st.info("👆 위에서 칼럼을 클릭하여 분류 기준을 선택하세요.")
 
 
 def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendor_columns):

@@ -16,7 +16,7 @@ from map import (
 def render_keyword_tab():
     """키워드 관리 탭 UI를 렌더링합니다."""
     st.subheader("🏷️ 키워드 관리")
-    st.caption("업체별 분류 키워드를 인라인으로 편집합니다. 행을 직접 추가·삭제·수정한 뒤 **💾 변경사항 저장** 버튼을 누르세요.")
+    st.caption("업체별 분류 키워드를 인라인으로 편집합니다. 키워드를 수정한 뒤 **💾 변경사항 저장** 버튼을 누르세요.")
 
     vendors = get_all_vendors()
     if not vendors:
@@ -55,7 +55,7 @@ def render_keyword_tab():
 
     edited_df = st.data_editor(
         edit_df,
-        num_rows="dynamic",          # 행 추가/삭제 허용
+        num_rows="fixed",             # 키워드 1개 고정 — 행 추가/삭제 불가
         use_container_width=True,
         hide_index=True,
         key=f"kw_editor_{vendor_id}",
@@ -80,17 +80,7 @@ def render_keyword_tab():
     has_changes = new_keywords != current_keywords
 
     if has_changes:
-        # 변경 내역 미리보기
-        added = [kw for kw in new_keywords if kw not in current_keywords]
-        removed = [kw for kw in current_keywords if kw not in new_keywords]
-
-        if added or removed:
-            preview_parts = []
-            if added:
-                preview_parts.append(f"➕ 추가: {', '.join(added)}")
-            if removed:
-                preview_parts.append(f"🗑️ 삭제: {', '.join(removed)}")
-            st.info(" │ ".join(preview_parts))
+        st.info("✏️ 키워드가 수정되었습니다. 저장 버튼을 눌러 적용하세요.")
 
     # 저장 버튼
     save_col, reset_col = st.columns([2, 1])
