@@ -290,20 +290,63 @@ def get_split_config(idx):
 
 # ──────────────────────────────────── 분류 함수 ────────────────────────────────────
 
+_MAPPING_CONFIG_PATH = os.path.join(_BASE_DIR, "data", "mapping_config.json")
+_DEFAULT_CLASSIFICATION_COLUMN = "상품약어"
+
+
+def _get_classification_column():
+    """mapping_config.json에서 분류 기준 칼럼을 조회합니다.
+    
+    여러 source_type 중 classification_column이 설정된 첫 번째 값을 반환합니다.
+    설정이 없으면 기본값 '상품약어'를 반환합니다.
+    """
+    try:
+        with open(_MAPPING_CONFIG_PATH, "r", encoding="utf-8") as f:
+            mapping_config = json.load(f)
+        
+        source_types = mapping_config.get("source_types", {})
+        for source_name, source_config in source_types.items():
+            col = source_config.get("classification_column", "")
+            if col:
+                return col
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    
+    return _DEFAULT_CLASSIFICATION_COLUMN
+
+
 def sort_data(df):
-    """상품약어를 기준으로 업체별 ID를 부여하고 리스트로 반환"""
+    """분류 기준 칼럼의 키워드를 기반으로 업체별 ID를 부여하고 리스트로 반환.
+    
+    분류 기준 칼럼은 mapping_config.json의 classification_column 설정을 따르며,
+    설정이 없으면 기본값 '상품약어'를 사용합니다.
+    """
     current_nh_list = get_nh_list()
+    
+    # 0. 분류 기준 칼럼 결정
+    classification_col = _get_classification_column()
+    
+    # 분류 기준 칼럼이 DataFrame에 존재하는지 확인
+    if classification_col not in df.columns:
+        logger.warning(
+            f"분류 기준 칼럼 '{classification_col}'이(가) 데이터에 없습니다. "
+            f"기본값 '{_DEFAULT_CLASSIFICATION_COLUMN}'로 대체합니다."
+        )
+        classification_col = _DEFAULT_CLASSIFICATION_COLUMN
+        if classification_col not in df.columns:
+            logger.error(f"기본 분류 칼럼 '{classification_col}'도 데이터에 없습니다. 분류를 수행할 수 없습니다.")
+            return []
     
     # 1. 초기화
     df['nh_id'] = -1
 
-    # 2. 키워드 기반 업체 매핑
+    # 2. 키워드 기반 업체 매핑 (동적 칼럼 사용)
     vendors = get_all_vendors()
     for vendor in vendors:
         vid = vendor["id"]
         keywords = vendor.get("keywords", [vendor["name"]])
         for keyword in keywords:
-            df.loc[df['상품약어'].str.contains(keyword, na=False, regex=False), 'nh_id'] = vid
+            df.loc[df[classification_col].str.contains(keyword, na=False, regex=False), 'nh_id'] = vid
 
     # 3. 데이터가 존재하는 ID만 추출하여 리스트 생성
     sorted_df_list = []
