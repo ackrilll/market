@@ -217,20 +217,28 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
     """칼럼 매핑 모드 UI"""
     st.markdown("### 🔗 칼럼 매핑")
     st.caption("원본 주문서의 칼럼을 업체 양식의 칼럼에 매핑하세요. "
-               "왼쪽(원본)에서 칼럼을 선택하고, 오른쪽(업체)에서 대응 칼럼을 선택합니다.")
+               "왼쪽(원본)에서 칼럼을 선택하고, 오른쪽(업체)에서 대응 칼럼을 선택합니다. "
+               "**'❌ 해당 없음'**을 선택하면 직접 고정값을 입력할 수 있습니다.")
 
     # 현재 매핑 로드
     mapping_config = _load_mapping_config()
     source_config = mapping_config.get("source_types", {}).get(source_name, {})
     vendor_mappings = source_config.get("vendor_mappings", {})
     current_map = vendor_mappings.get(vendor_name, {}).get("column_map", {})
+    current_constants = vendor_mappings.get(vendor_name, {}).get("constant_values", {})
 
-    # 세션 상태에 매핑 저장
+    # 세션 상태에 매핑 & 고정값 저장
     session_key = f"mapping_{source_name}_{vendor_name}"
+    const_session_key = f"constants_{source_name}_{vendor_name}"
     if session_key not in st.session_state:
         st.session_state[session_key] = dict(current_map)
+    if const_session_key not in st.session_state:
+        st.session_state[const_session_key] = dict(current_constants)
 
     current_mapping = st.session_state[session_key]
+    current_constant_values = st.session_state[const_session_key]
+
+    _NA_OPTION = "❌ 해당 없음"
 
     # 새 매핑 추가 UI
     st.markdown("#### ➕ 매핑 추가")
@@ -239,7 +247,7 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
     with map_col1:
         src_col = st.selectbox(
             "원본 칼럼",
-            options=["(선택)"] + source_columns,
+            options=["(선택)"] + source_columns + [_NA_OPTION],
             key="map_src_col"
         )
     with map_col2:
@@ -252,20 +260,44 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
         st.markdown("<br>", unsafe_allow_html=True)
         add_mapping = st.button("➕ 추가", key="add_mapping_btn")
 
+    # "해당 없음" 선택 시 고정값 입력 필드 표시
+    custom_value = ""
+    if src_col == _NA_OPTION:
+        custom_value = st.text_input(
+            "📝 고정값 입력",
+            placeholder="이 업체 칼럼에 항상 들어갈 값을 입력하세요",
+            help="예: CJ대한통운, 2025-01-01 등",
+            key="map_custom_value"
+        )
+
     if add_mapping:
-        if src_col != "(선택)" and dst_col != "(선택)":
+        if dst_col == "(선택)":
+            st.warning("⚠️ 업체 칼럼을 선택하세요.")
+        elif src_col == "(선택)":
+            st.warning("⚠️ 원본 칼럼을 선택하거나 '해당 없음'을 선택하세요.")
+        elif src_col == _NA_OPTION:
+            # 고정값 매핑
+            if not custom_value.strip():
+                st.warning("⚠️ 고정값을 입력하세요.")
+            else:
+                current_constant_values[dst_col] = custom_value.strip()
+                st.session_state[const_session_key] = current_constant_values
+                st.rerun()
+        else:
+            # 일반 칼럼 매핑
             current_mapping[src_col] = dst_col
             st.session_state[session_key] = current_mapping
             st.rerun()
-        else:
-            st.warning("⚠️ 원본 칼럼과 업체 칼럼을 모두 선택하세요.")
 
-    # 현재 매핑 테이블
-    if current_mapping:
+    # 현재 매핑 & 고정값 테이블
+    has_any = bool(current_mapping) or bool(current_constant_values)
+    if has_any:
         st.markdown("#### 📋 현재 매핑 관계")
         mapping_rows = []
         for src, dst in current_mapping.items():
-            mapping_rows.append({"원본 칼럼": src, "→": "→", "업체 칼럼": dst})
+            mapping_rows.append({"원본 칼럼": src, "→": "→", "업체 칼럼": dst, "유형": "칼럼 매핑"})
+        for dst, val in current_constant_values.items():
+            mapping_rows.append({"원본 칼럼": f"✏️ \"{val}\"", "→": "→", "업체 칼럼": dst, "유형": "고정값"})
 
         st.dataframe(
             pd.DataFrame(mapping_rows),
@@ -276,6 +308,7 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
         # 개별 매핑 삭제
         st.markdown("#### 🗑️ 매핑 삭제")
         delete_options = [f"{src} → {dst}" for src, dst in current_mapping.items()]
+        delete_options += [f"✏️ \"{val}\" → {dst} (고정값)" for dst, val in current_constant_values.items()]
         to_delete = st.multiselect(
             "삭제할 매핑 선택",
             options=delete_options,
@@ -284,9 +317,15 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
 
         if to_delete and st.button("🗑️ 선택 매핑 삭제", key="delete_mapping_btn"):
             for item in to_delete:
-                src = item.split(" → ")[0]
-                current_mapping.pop(src, None)
+                if "(고정값)" in item:
+                    # 고정값 삭제: '✏️ "val" → dst (고정값)' 형식에서 dst 추출
+                    dst = item.split(" → ")[1].replace(" (고정값)", "")
+                    current_constant_values.pop(dst, None)
+                else:
+                    src = item.split(" → ")[0]
+                    current_mapping.pop(src, None)
             st.session_state[session_key] = current_mapping
+            st.session_state[const_session_key] = current_constant_values
             st.rerun()
 
         st.divider()
@@ -301,23 +340,30 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
                     mapping_config["source_types"][source_name] = {}
                 mapping_config["source_types"][source_name].setdefault("vendor_mappings", {})
                 mapping_config["source_types"][source_name]["vendor_mappings"][vendor_name] = {
-                    "column_map": dict(current_mapping)
+                    "column_map": dict(current_mapping),
+                    "constant_values": dict(current_constant_values),
                 }
                 _save_mapping_config(mapping_config)
 
-                # vendor_config.json의 rename_map도 갱신
+                # vendor_config.json의 rename_map + constant_values도 갱신
                 if vendor:
                     try:
-                        update_vendor_in_config(vendor["id"], {"rename_map": dict(current_mapping)})
+                        update_vendor_in_config(vendor["id"], {
+                            "rename_map": dict(current_mapping),
+                            "constant_values": dict(current_constant_values),
+                        })
                         reload_config()
                     except Exception:
-                        pass  # rename_map 갱신 실패해도 mapping_config는 저장됨
+                        pass  # 갱신 실패해도 mapping_config는 저장됨
 
-                st.success(f"✅ '{source_name}' → '{vendor_name}' 매핑이 저장되었습니다! ({len(current_mapping)}개 칼럼)")
+                total = len(current_mapping) + len(current_constant_values)
+                st.success(f"✅ '{source_name}' → '{vendor_name}' 매핑이 저장되었습니다! "
+                           f"(칼럼 매핑 {len(current_mapping)}개, 고정값 {len(current_constant_values)}개)")
 
         with save_col2:
             if st.button("🔄 초기화", key="reset_mapping", use_container_width=True):
                 st.session_state[session_key] = {}
+                st.session_state[const_session_key] = {}
                 st.rerun()
     else:
         st.info("매핑이 없습니다. 위에서 원본 칼럼과 업체 칼럼을 선택하여 매핑을 추가하세요.")
