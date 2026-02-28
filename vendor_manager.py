@@ -6,6 +6,8 @@
 import streamlit as st
 import pandas as pd
 import os
+import base64
+import io
 from map import (
     get_all_vendors,
     get_vendor_by_name,
@@ -15,6 +17,27 @@ from map import (
     reload_config,
     _FORM_DIR,
 )
+from components.vendor_table import vendor_table
+
+
+def _save_form_file_from_bytes(file_bytes, vendor_name, original_filename):
+    """바이트 데이터로부터 양식 파일을 data/target_form/에 저장합니다."""
+    os.makedirs(_FORM_DIR, exist_ok=True)
+    ext = os.path.splitext(original_filename)[1]
+    filename = f"{vendor_name}{ext}"
+    filepath = os.path.join(_FORM_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(file_bytes)
+    return filename
+
+
+def _read_form_columns_from_bytes(file_bytes):
+    """바이트 데이터에서 엑셀 칼럼 헤더를 추출합니다."""
+    try:
+        df = pd.read_excel(io.BytesIO(file_bytes), nrows=5)
+        return list(df.columns)
+    except Exception:
+        return []
 
 
 def _save_form_file(uploaded_file, vendor_name):
@@ -49,7 +72,6 @@ def _load_existing_form(vendor_name):
                 return df, filepath
             except Exception:
                 pass
-    # form_file 필드로 시도
     return None, None
 
 
@@ -66,171 +88,113 @@ def _get_form_file_path(form_filename):
 def render_vendor_tab():
     """업체 관리 탭 UI를 렌더링합니다."""
     st.subheader("🏭 업체 관리")
-    st.caption("테이블에서 직접 업체를 추가·수정할 수 있습니다. 변경사항은 자동으로 저장됩니다.")
+    st.caption("테이블에서 직접 업체를 추가·수정하고, 양식 파일을 셀에 드래그 앤 드롭할 수 있습니다.")
 
     vendors = get_all_vendors()
 
-    st.markdown("### 📋 등록된 업체 목록")
+    # ── 커스텀 테이블 컴포넌트 ──
+    result = vendor_table(vendors=vendors, key="vendor_table_component")
 
-    # ── 원본 데이터 구성 ──
-    original_rows = []
-    vendor_id_map = {}  # 행 인덱스 → vendor_id 매핑
-    for i, v in enumerate(vendors):
-        keywords = ", ".join(v.get("keywords", [v["name"]]))
-        form_file = v.get("form_file", "")
-        original_rows.append({
-            "선택": False,
-            "업체명": v["name"],
-            "분류키워드": keywords,
-            "양식 파일": form_file if form_file else "",
-        })
-        vendor_id_map[i] = v["id"]
+    # ── 컴포넌트 반환값 처리 ──
+    if result is not None:
+        changes_applied = False
 
-    original_df = pd.DataFrame(
-        original_rows,
-        columns=["선택", "업체명", "분류키워드", "양식 파일"],
-    )
-
-    # ── data_editor: 추가/수정 가능한 통합 테이블 ──
-    edited_df = st.data_editor(
-        original_df,
-        num_rows="dynamic",
-        use_container_width=True,
-        hide_index=True,
-        key="vendor_table_editor",
-        column_config={
-            "선택": st.column_config.CheckboxColumn(
-                "선택",
-                help="삭제할 업체를 선택하세요.",
-                default=False,
-            ),
-            "업체명": st.column_config.TextColumn(
-                "업체명",
-                help="업체의 이름입니다.",
-                required=True,
-                width="medium",
-            ),
-            "분류키워드": st.column_config.TextColumn(
-                "분류키워드",
-                help="쉼표로 구분된 분류 키워드입니다. 주문서의 상품약어에 이 문자열이 포함되면 해당 업체로 분류됩니다.",
-                required=True,
-                width="large",
-            ),
-            "양식 파일": st.column_config.TextColumn(
-                "양식 파일",
-                help="양식 파일명입니다. 아래 '양식 파일 관리' 영역에서 업로드/변경할 수 있습니다.",
-                disabled=True,
-                width="medium",
-            ),
-        },
-    )
-
-    # ── 선택된 업체 삭제 버튼 ──
-    selected_existing = [
-        idx for idx in range(len(original_rows))
-        if idx < len(edited_df) and edited_df.iloc[idx].get("선택", False)
-        and idx in vendor_id_map
-    ]
-
-    if selected_existing:
-        vendor_names_to_delete = [original_rows[idx]["업체명"] for idx in selected_existing]
-        if st.button(
-            f"🗑️ 선택한 {len(selected_existing)}개 업체 삭제 ({', '.join(vendor_names_to_delete)})",
-            type="secondary",
-            use_container_width=True,
-            key="vendor_delete_selected",
-        ):
-            for idx in sorted(selected_existing, reverse=True):
-                vid = vendor_id_map[idx]
-                try:
-                    remove_vendor_from_config(vid)
-                except Exception as e:
-                    st.error(f"⚠️ '{original_rows[idx]['업체명']}' 삭제 실패: {e}")
-            reload_config()
-            st.success(f"✅ {len(selected_existing)}개 업체가 삭제되었습니다.")
-            st.rerun()
-
-    # ── 자동 저장 ──
-    editor_state = st.session_state.get("vendor_table_editor", {})
-    edited_rows = editor_state.get("edited_rows", {})
-    added_rows = editor_state.get("added_rows", [])
-    deleted_rows = editor_state.get("deleted_rows", [])
-
-    changes_applied = False
-
-    # 1) 내장 행 삭제 처리
-    for row_idx in sorted(deleted_rows, reverse=True):
-        if row_idx in vendor_id_map:
-            vid = vendor_id_map[row_idx]
+        # 1) 삭제 처리
+        deleted_ids = result.get("deleted_ids", [])
+        for vid in deleted_ids:
             try:
                 remove_vendor_from_config(vid)
                 changes_applied = True
             except Exception as e:
                 st.error(f"⚠️ 삭제 실패: {e}")
 
-    # 2) 수정된 행 자동 저장
-    for row_idx_str, changes in edited_rows.items():
-        row_idx = int(row_idx_str)
-        if row_idx in vendor_id_map:
-            # "선택" 체크박스 변경은 저장 대상이 아님
-            data_changes = {k: v for k, v in changes.items() if k != "선택"}
-            if not data_changes:
+        # 2) 행 데이터 처리 (수정/추가/파일 업로드)
+        result_rows = result.get("rows", [])
+        for row in result_rows:
+            row_id = row.get("id")
+            name = str(row.get("name", "")).strip()
+            kw_str = str(row.get("keywords", "")).strip()
+            file_data = row.get("_file_data")
+            file_name = row.get("_file_name")
+            is_new = row.get("_is_new", False)
+
+            if not name:
                 continue
 
-            vid = vendor_id_map[row_idx]
-            updates = {}
+            # 새 업체 추가
+            if is_new and row_id is None:
+                keywords = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else [name]
+                try:
+                    new_id = add_vendor_to_config(name=name, keywords=keywords)
+                    changes_applied = True
 
-            if "업체명" in data_changes:
-                new_name = str(data_changes["업체명"]).strip()
-                if new_name:
-                    updates["name"] = new_name
+                    # 파일이 첨부된 경우
+                    if file_data and file_name:
+                        try:
+                            raw = base64.b64decode(file_data)
+                            form_fn = _save_form_file_from_bytes(raw, name, file_name)
+                            cols = _read_form_columns_from_bytes(raw)
+                            updates = {"form_file": form_fn}
+                            if cols:
+                                updates["target_columns"] = cols
+                            update_vendor_in_config(new_id, updates)
+                        except Exception:
+                            pass
+                except Exception as e:
+                    st.error(f"⚠️ '{name}' 추가 실패: {e}")
+                continue
 
-            if "분류키워드" in data_changes:
-                kw_str = str(data_changes["분류키워드"]).strip()
-                if kw_str:
+            # 기존 업체 수정
+            if row_id is not None:
+                vendor = next((v for v in vendors if v["id"] == row_id), None)
+                if vendor is None:
+                    continue
+
+                updates = {}
+                if name != vendor["name"]:
+                    updates["name"] = name
+                current_kw = ", ".join(vendor.get("keywords", [vendor["name"]]))
+                if kw_str != current_kw:
                     new_kw = [k.strip() for k in kw_str.split(",") if k.strip()]
                     if new_kw:
                         updates["keywords"] = new_kw
 
-            if updates:
-                try:
-                    update_vendor_in_config(vid, updates)
-                    changes_applied = True
-                except Exception as e:
-                    st.error(f"⚠️ 수정 실패: {e}")
+                # 파일 업로드 처리
+                if file_data and file_name:
+                    try:
+                        raw = base64.b64decode(file_data)
+                        vname = name if name else vendor["name"]
+                        form_fn = _save_form_file_from_bytes(raw, vname, file_name)
+                        cols = _read_form_columns_from_bytes(raw)
+                        updates["form_file"] = form_fn
+                        if cols:
+                            updates["target_columns"] = cols
+                    except Exception as e:
+                        st.error(f"⚠️ 파일 저장 실패: {e}")
 
-    # 3) 추가된 행 자동 저장
-    for added in added_rows:
-        name = str(added.get("업체명", "")).strip()
-        kw_str = str(added.get("분류키워드", "")).strip()
-        if not name:
-            continue  # 업체명 없으면 무시
-        keywords = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else [name]
-        try:
-            add_vendor_to_config(name=name, keywords=keywords)
-            changes_applied = True
-        except Exception as e:
-            st.error(f"⚠️ '{name}' 추가 실패: {e}")
+                # 파일 제거 처리
+                file_removed = row.get("_file_removed", False)
+                if file_removed and not file_data:
+                    updates["form_file"] = ""
 
-    if changes_applied:
-        reload_config()
-        st.rerun()
+                if updates:
+                    try:
+                        update_vendor_in_config(row_id, updates)
+                        changes_applied = True
+                    except Exception as e:
+                        st.error(f"⚠️ 수정 실패: {e}")
 
-    st.caption(f"총 {len(vendors)}개 업체 등록됨")
+        if changes_applied:
+            reload_config()
+            st.rerun()
 
-    st.divider()
-
-    # ── 양식 파일 관리 ──
-    st.markdown("### 📂 양식 파일 관리")
-
-    if not vendors:
-        st.info("등록된 업체가 없습니다. 위 테이블에서 업체를 먼저 추가하세요.")
-        return
-
-    # ── 양식 파일 바로 열기 (다운로드 그리드) ──
+    # ── 양식 파일 다운로드 ──
+    vendors = get_all_vendors()  # 최신 데이터
     vendors_with_files = [v for v in vendors if v.get("form_file")]
     if vendors_with_files:
-        st.caption("📥 양식 파일을 클릭하면 다운로드하여 열어볼 수 있습니다.")
+        st.divider()
+        st.markdown("### 📥 양식 파일 다운로드")
+        st.caption("클릭하면 해당 업체의 양식 파일을 다운로드합니다.")
         NUM_COLS = 4
         cols = st.columns(NUM_COLS)
         for i, v in enumerate(vendors_with_files):
@@ -255,48 +219,4 @@ def render_vendor_tab():
                         key=f"dl_form_missing_{v['id']}",
                         use_container_width=True,
                     )
-    else:
-        st.caption("양식 파일이 등록된 업체가 없습니다.")
 
-    st.divider()
-
-    # ── 양식 파일 업로드 (드래그 앤 드롭) ──
-    st.caption("🔄 양식 파일을 변경할 업체를 선택한 뒤, 파일을 드래그 앤 드롭하세요. 업로드 즉시 자동 적용됩니다.")
-
-    vendor_names = [v["name"] for v in vendors]
-    selected_vendor = st.selectbox(
-        "업체 선택",
-        options=vendor_names,
-        key="form_vendor_select",
-    )
-
-    if selected_vendor:
-        vendor = get_vendor_by_name(selected_vendor)
-        if vendor:
-            vendor_id = vendor["id"]
-
-            # 양식 파일 업로드 (드래그 앤 드롭 지원)
-            update_form = st.file_uploader(
-                f"📂 {selected_vendor} 양식 파일 (드래그 앤 드롭 또는 클릭하여 업로드)",
-                type=["xlsx", "xls"],
-                key=f"update_form_{vendor_id}",
-            )
-
-            # 업로드 즉시 자동 적용
-            if update_form is not None:
-                new_cols, preview = _read_form_columns(update_form)
-                if new_cols:
-                    st.dataframe(preview, use_container_width=True, height=150)
-                    st.caption(f"감지된 칼럼 ({len(new_cols)}개): {', '.join(new_cols)}")
-
-                    try:
-                        form_fn = _save_form_file(update_form, selected_vendor)
-                        update_vendor_in_config(vendor_id, {
-                            "target_columns": new_cols,
-                            "form_file": form_fn,
-                        })
-                        reload_config()
-                        st.success(f"✅ '{selected_vendor}' 양식이 자동 적용되었습니다!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ 양식 업데이트 실패: {e}")
