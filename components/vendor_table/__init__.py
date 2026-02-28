@@ -5,9 +5,13 @@
 """
 import streamlit.components.v1 as components
 import os
+import base64
 
 _COMPONENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 _component = components.declare_component("vendor_table", path=_COMPONENT_DIR)
+
+# map.py의 _FORM_DIR 경로
+_FORM_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "target_form")
 
 
 def vendor_table(vendors, key=None):
@@ -20,18 +24,29 @@ def vendor_table(vendors, key=None):
 
     Returns:
         dict | None: 사용자 상호작용 결과
-            - rows: 현재 테이블 행 데이터
-            - file_upload: 업로드된 파일 정보 (row_index, filename, data)
     """
-    # 컴포넌트에 전달할 데이터 준비
     vendor_data = []
     for v in vendors:
         keywords = ", ".join(v.get("keywords", [v["name"]]))
+        form_file = v.get("form_file", "")
+
+        # 양식 파일이 있으면 base64로 읽어서 전달 (다운로드용)
+        form_file_data = None
+        if form_file:
+            filepath = os.path.join(_FORM_DIR, form_file)
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, "rb") as f:
+                        form_file_data = base64.b64encode(f.read()).decode("utf-8")
+                except Exception:
+                    pass
+
         vendor_data.append({
             "id": v["id"],
             "name": v["name"],
             "keywords": keywords,
-            "form_file": v.get("form_file", ""),
+            "form_file": form_file,
+            "form_file_data": form_file_data,
         })
 
     component_value = _component(
@@ -41,3 +56,4 @@ def vendor_table(vendors, key=None):
     )
 
     return component_value
+

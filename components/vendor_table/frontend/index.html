@@ -68,11 +68,11 @@
     .text-input {
       width: 100%;
       padding: 6px 8px;
-      border: 1px solid transparent;
+      border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 14px;
       font-family: inherit;
-      background: transparent;
+      background: #fff;
       transition: border-color 0.2s, background 0.2s;
     }
 
@@ -95,7 +95,7 @@
       border-radius: 6px;
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 6px;
       padding: 6px 10px;
       cursor: pointer;
@@ -121,6 +121,7 @@
       border-color: transparent;
       color: #1a73e8;
       background: transparent;
+      justify-content: flex-start;
     }
 
     .drop-zone .file-name {
@@ -128,10 +129,10 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 180px;
+      max-width: 200px;
       color: #1a73e8;
       text-decoration: underline;
-      cursor: default;
+      cursor: pointer;
     }
 
     .drop-zone .clear-btn {
@@ -336,8 +337,45 @@
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
-        nameSpan.title = row.form_file;
+        nameSpan.title = row.form_file + " (클릭하여 다운로드)";
+        // 파일 클릭 시 다운로드
+        nameSpan.onclick = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (row._form_file_data) {
+            const ext = row.form_file.split(".").pop().toLowerCase();
+            const mime = ext === "xlsx"
+              ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              : "application/vnd.ms-excel";
+            const byteChars = atob(row._form_file_data);
+            const byteArr = new Uint8Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([byteArr], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = row.form_file;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+        };
         zone.appendChild(nameSpan);
+
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "clear-btn";
+        clearBtn.textContent = "X";
+        clearBtn.title = "파일 제거";
+        clearBtn.onclick = (e) => {
+          e.stopPropagation();
+          row.form_file = "";
+          row._file_removed = true;
+          row._form_file_data = null;
+          renderTable();
+          sendValue();
+        };
+        zone.appendChild(clearBtn);
       } else {
         zone.textContent = "파일을 드래그하거나 클릭";
       }
@@ -491,6 +529,7 @@
           name: v.name,
           keywords: v.keywords,
           form_file: v.form_file || "",
+          _form_file_data: v.form_file_data || null,
           selected: false,
           _is_new: false,
         }));
@@ -519,17 +558,19 @@
           if (!currentIds.has(v.id)) {
             rows.push({
               id: v.id, name: v.name, keywords: v.keywords,
-              form_file: v.form_file || "", selected: false, _is_new: false,
+              form_file: v.form_file || "", _form_file_data: v.form_file_data || null,
+              selected: false, _is_new: false,
             });
           }
         });
 
-        // 기존 행의 form_file 갱신 (파일 업로드 후 Python에서 업데이트된 경우)
+        // 기존 행의 form_file 및 다운로드 데이터 갱신
         rows.forEach(r => {
           if (r.id !== null) {
             const nv = newVendors.find(v => v.id === r.id);
             if (nv && !r._file_data) {
               r.form_file = nv.form_file || "";
+              r._form_file_data = nv.form_file_data || null;
             }
           }
         });
