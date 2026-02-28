@@ -92,13 +92,52 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # (다운로드는 JS 컴포넌트에서 직접 처리)
+    # ── 양식 파일 자동 다운로드 처리 ──
+    if "_vendor_dl_file" in st.session_state:
+        dl_file = st.session_state.pop("_vendor_dl_file")
+        filepath = _get_form_file_path(dl_file)
+        if filepath:
+            with open(filepath, "rb") as f:
+                file_bytes = f.read()
+            ext = os.path.splitext(dl_file)[1].lower()
+            mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    if ext == ".xlsx"
+                    else "application/vnd.ms-excel")
+            st.download_button(
+                label=f"{dl_file} 다운로드",
+                data=file_bytes,
+                file_name=dl_file,
+                mime=mime,
+                key="dl_form_auto",
+                type="primary",
+            )
+            # 자동 클릭으로 즉시 다운로드 트리거
+            st.markdown("""<script>
+            setTimeout(function() {
+                var btns = window.parent.document.querySelectorAll('button[data-testid="stBaseButton-primary"]');
+                for (var i = 0; i < btns.length; i++) {
+                    if (btns[i].textContent.indexOf('다운로드') > -1) {
+                        btns[i].click();
+                        break;
+                    }
+                }
+            }, 200);
+            </script>""", unsafe_allow_html=True)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
+        # 다운로드 요청이 있으면 session_state에 저장 후 rerun
+        dl_req = result.get("download_request")
+        if dl_req:
+            form_file = dl_req.get("form_file", "")
+            if form_file:
+                st.session_state["_vendor_dl_file"] = form_file
+                st.rerun()
+            return
+
         changes_applied = False
 
         # 1) 삭제 처리 (이미 삭제된 ID는 무시)

@@ -338,32 +338,14 @@
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 다운로드 (blob URL + 새 창)
+        // 파일 클릭 시 Python에 다운로드 요청 전달
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
-          if (row._form_file_data) {
-            const ext = row.form_file.split(".").pop().toLowerCase();
-            const mime = ext === "xlsx"
-              ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              : "application/vnd.ms-excel";
-            const byteChars = atob(row._form_file_data);
-            const byteArr = new Uint8Array(byteChars.length);
-            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-            const blob = new Blob([byteArr], { type: mime });
-            const url = URL.createObjectURL(blob);
-            // 새 창으로 열어서 다운로드 (sandbox allow-popups 허용)
-            const w = window.open(url, "_blank");
-            if (!w) {
-              // 팝업 차단 시 fallback: 현재 프레임 내 <a> 클릭
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = row.form_file;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-            }
-            setTimeout(() => { URL.revokeObjectURL(url); }, 5000);
+          if (row.form_file && row.id !== null) {
+            const value = buildValue();
+            value.download_request = { vendor_id: row.id, form_file: row.form_file };
+            setComponentValue(value);
           }
         };
         zone.appendChild(nameSpan);
