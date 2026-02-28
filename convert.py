@@ -169,19 +169,19 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 10px 16px !important;
+        padding: 12px 18px !important;
         margin: 0 !important;
         border-radius: 0 !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
         font-weight: 500 !important;
-        color: #b0b8c1 !important;
+        color: #d8dee4 !important;
         cursor: pointer;
         transition: background 0.15s;
         border-left: 3px solid transparent;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
         background: #363b48 !important;
-        color: #e0e0e0 !important;
+        color: #fff !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
     section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
