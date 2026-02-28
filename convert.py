@@ -784,11 +784,17 @@ def main():
             .avatar .overlay {
                 position: absolute; top:0; left:0; right:0; bottom:0;
                 background: rgba(0,0,0,0.5); display: flex; align-items: center;
-                justify-content: center; opacity: 0; transition: opacity 0.2s; border-radius: 50%;
+                justify-content: center; gap: 8px; opacity: 0; transition: opacity 0.2s; border-radius: 50%;
             }
             .avatar:hover .overlay { opacity: 1; }
             .avatar.dragover { border: 2px dashed #03C75A; }
-            .overlay svg { width: 28px; height: 28px; fill: #fff; }
+            .overlay svg { width: 24px; height: 24px; fill: #fff; cursor: pointer; }
+            .overlay .reset-btn {
+                width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.2);
+                display: none; align-items: center; justify-content: center; cursor: pointer;
+                font-size: 14px; color: #fff; font-weight: bold; border: none; padding: 0;
+            }
+            .overlay .reset-btn.show { display: flex; }
             .name { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }
             .role { font-size: 12px; color: #8a919a; }
         </style>
@@ -798,7 +804,8 @@ def main():
                     <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
                 </svg>
                 <div class="overlay">
-                    <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    <svg id="cameraBtn" viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    <button class="reset-btn" id="resetBtn" title="기본 이미지로 변경">✕</button>
                 </div>
             </div>
             <div class="name">365건강농산</div>
@@ -809,6 +816,8 @@ def main():
             var avatar = document.getElementById('avatarDrop');
             var defaultIcon = document.getElementById('defaultIcon');
             var fileInput = document.getElementById('avatarFileInput');
+            var resetBtn = document.getElementById('resetBtn');
+            var cameraBtn = document.getElementById('cameraBtn');
 
             function setAvatar(dataUrl) {
                 localStorage.setItem('profile_avatar', dataUrl);
@@ -818,6 +827,15 @@ def main():
                 img.src = dataUrl;
                 defaultIcon.style.display = 'none';
                 avatar.insertBefore(img, avatar.firstChild);
+                resetBtn.classList.add('show');
+            }
+            function resetAvatar() {
+                localStorage.removeItem('profile_avatar');
+                var old = avatar.querySelector('img');
+                if (old) old.remove();
+                defaultIcon.style.display = '';
+                avatar.style.background = '#4a4f5c';
+                resetBtn.classList.remove('show');
             }
             function handleFile(file) {
                 if (file && file.type.startsWith('image/')) {
@@ -829,10 +847,20 @@ def main():
             // 저장된 이미지 복원
             var saved = localStorage.getItem('profile_avatar');
             if (saved) setAvatar(saved);
-            // 클릭 → 파일 선택
-            avatar.addEventListener('click', function() { fileInput.value = ''; fileInput.click(); });
+            // 카메라 클릭 → 파일 선택
+            cameraBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); fileInput.value = ''; fileInput.click();
+            });
             fileInput.addEventListener('change', function(e) {
                 if (e.target.files[0]) handleFile(e.target.files[0]);
+            });
+            // 리셋 버튼
+            resetBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); resetAvatar();
+            });
+            // 우클릭으로도 기본 이미지 복원
+            avatar.addEventListener('contextmenu', function(e) {
+                e.preventDefault(); if (avatar.querySelector('img')) resetAvatar();
             });
             // 드래그 앤 드롭
             avatar.addEventListener('dragover', function(e) {
