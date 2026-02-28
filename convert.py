@@ -767,8 +767,10 @@ def main():
             .avatar img {
                 position: absolute; top: 0; left: 0;
                 width: 100%; height: 100%;
-                object-fit: cover;
+                object-fit: contain;
                 border-radius: 50%;
+                padding: 4px;
+                box-sizing: border-box;
             }
             .avatar .overlay {
                 position: absolute; top:0; left:0; right:0; bottom:0;
