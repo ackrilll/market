@@ -275,12 +275,17 @@ def inject_custom_css():
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="stSidebarNavCollapseButton"],
     [data-testid="collapsedControl"],
-    .stSidebarCollapse {
+    [data-testid="stSidebarCollapsedControl"],
+    .stSidebarCollapse,
+    section[data-testid="stSidebar"] > button,
+    section[data-testid="stSidebar"] > div > button:first-child {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
         height: 0 !important;
         overflow: hidden !important;
+        position: absolute !important;
+        pointer-events: none !important;
     }
     /* 라디오 버튼 원형 숨김 */
     section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
