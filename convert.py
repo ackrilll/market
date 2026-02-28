@@ -258,7 +258,7 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 12px 20px 12px 17px !important;
+        padding: 12px 20px !important;
         margin: 0 !important;
         border-radius: 0 !important;
         font-size: 14px !important;
