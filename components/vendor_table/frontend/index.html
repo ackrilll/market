@@ -380,16 +380,18 @@
         zone.textContent = "파일을 드래그하거나 클릭";
       }
 
-      // 숨겨진 파일 입력
-      const fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.accept = ".xlsx,.xls";
-      fileInput.onchange = (e) => {
-        if (e.target.files.length > 0) {
-          handleFile(e.target.files[0], idx);
-        }
-      };
-      zone.appendChild(fileInput);
+      // 파일이 없을 때만 클릭 업로드용 file input 추가
+      if (!row.form_file) {
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".xlsx,.xls";
+        fileInput.onchange = (e) => {
+          if (e.target.files.length > 0) {
+            handleFile(e.target.files[0], idx);
+          }
+        };
+        zone.appendChild(fileInput);
+      }
 
       // 드래그앤드롭 이벤트
       zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("drag-over"); };
