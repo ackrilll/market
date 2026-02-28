@@ -123,17 +123,23 @@ def inject_custom_css():
 
     /* ── 상단 헤더 바 ── */
     .top-header-bar {
-        background: #03C75A;
+        background: #2b2f3a;
         padding: 10px 24px;
         margin: -80px -80px 20px -80px;
         display: flex;
         align-items: center;
+        justify-content: space-between;
     }
     .top-header-title {
         font-size: 17px;
         font-weight: 700;
         color: #fff;
         letter-spacing: -0.3px;
+    }
+    .top-header-user {
+        font-size: 13px;
+        color: #ccc;
+        letter-spacing: -0.2px;
     }
 
     /* Streamlit 기본 헤더 숨김 */
@@ -611,7 +617,8 @@ def main():
     # ── 상단 헤더 바 (네이버 스마트스토어센터 스타일) ──
     st.markdown("""
     <div class="top-header-bar">
-        <span class="top-header-title">365건강농산 주문서 변환 시스템</span>
+        <span class="top-header-title">주문서 변환 시스템</span>
+        <span class="top-header-user">365건강농산 님 | <a href="#" style="color:#ccc; text-decoration:none;">로그아웃</a></span>
     </div>
     """, unsafe_allow_html=True)
     
@@ -620,10 +627,9 @@ def main():
     with st.sidebar:
         st.markdown("""
         <div style="padding:16px 0 8px 0;">
-            <span style="font-size:22px; font-weight:700; color:#fff;">365 건강농산</span>
+            <span style="font-size:20px; font-weight:700; color:#fff;">주문서 변환 시스템</span>
         </div>
         """, unsafe_allow_html=True)
-        st.caption("주문서 변환 시스템 v3.0")
         st.divider()
 
         # 네비게이션 메뉴
