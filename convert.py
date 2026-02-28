@@ -725,6 +725,21 @@ def main():
                     '<span class="top-header-user">365건강농산 님 <span style="color:#555; margin:0 4px;">|</span> <a href="#" style="color:#aaa; text-decoration:none;">로그아웃</a></span>';
                 parent.body.appendChild(header);
             }
+            // 사이드바 접기 버튼 제거
+            function removeCollapseBtn() {
+                var btns = parent.querySelectorAll(
+                    'button[data-testid="stSidebarCollapseButton"],' +
+                    'button[data-testid="baseButton-header"],' +
+                    '[data-testid="collapsedControl"]'
+                );
+                btns.forEach(function(b) { b.style.display = 'none'; b.remove(); });
+            }
+            removeCollapseBtn();
+            // MutationObserver로 동적 버튼도 즉시 제거
+            var observer = new MutationObserver(function() { removeCollapseBtn(); });
+            var sidebar = parent.querySelector('section[data-testid="stSidebar"]');
+            if (sidebar) observer.observe(sidebar, { childList: true, subtree: true });
+            observer.observe(parent.body, { childList: true, subtree: true });
         })();
     </script>
     """, height=0)
