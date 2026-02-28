@@ -814,7 +814,7 @@ def main():
             var saved = localStorage.getItem('profile_avatar');
             if (saved) setAvatar(saved);
             // 클릭 → 파일 선택
-            avatar.addEventListener('click', function() { fileInput.click(); });
+            avatar.addEventListener('click', function() { fileInput.value = ''; fileInput.click(); });
             fileInput.addEventListener('change', function(e) {
                 if (e.target.files[0]) handleFile(e.target.files[0]);
             });
