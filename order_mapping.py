@@ -60,7 +60,7 @@ def _load_vendor_form(vendor_name):
 
 def render_mapping_tab():
     """주문 변환 매핑 탭 UI를 렌더링합니다."""
-    st.subheader("🔄 주문 변환 매핑")
+    st.subheader(" 주문 변환 매핑")
     st.caption("원본 주문서의 칼럼을 업체 양식 칼럼에 매핑하고, 분류 기준 칼럼을 설정합니다.")
 
     vendors = get_all_vendors()
@@ -69,7 +69,7 @@ def render_mapping_tab():
         return
 
     # ── 1. 원본 주문서 업로드 ──
-    st.markdown("### 📄 원본 주문서 업로드")
+    st.markdown("###  원본 주문서 업로드")
     source_file = st.file_uploader(
         "원본 주문서 엑셀 파일 (.xlsx)",
         type=["xlsx", "xls"],
@@ -78,7 +78,7 @@ def render_mapping_tab():
     )
 
     if source_file is None:
-        st.info("👆 원본 주문서 파일을 업로드하세요.")
+        st.info(" 원본 주문서 파일을 업로드하세요.")
         _show_existing_mappings()
         return
 
@@ -100,7 +100,7 @@ def render_mapping_tab():
     )
 
     # ── 2. 대상 업체 선택 ──
-    st.markdown("### 🏭 매핑 대상 업체 선택")
+    st.markdown("###  매핑 대상 업체 선택")
     vendor_names = [v["name"] for v in vendors]
     selected_vendor = st.selectbox(
         "업체 선택",
@@ -125,29 +125,29 @@ def render_mapping_tab():
         return
 
     # ── 3. 모드 선택 ──
-    st.markdown("### ⚙️ 설정 모드")
+    st.markdown("###  설정 모드")
     mode = st.radio(
         "모드 선택",
-        options=["📋 분류 기준 칼럼 선택", "🔗 칼럼 매핑"],
+        options=[" 분류 기준 칼럼 선택", " 칼럼 매핑"],
         horizontal=True,
         key="mapping_mode"
     )
 
     # ── 4. 모드별 UI ──
-    if "📋 분류 기준 칼럼 선택" in mode:
+    if " 분류 기준 칼럼 선택" in mode:
         _render_classification_mode(source_name, source_columns)
     else:
         # 칼럼 매핑 모드 — 좌우 양식 비교 뷰 표시
-        st.markdown("### 📊 양식 비교")
+        st.markdown("###  양식 비교")
         left_col, right_col = st.columns(2)
 
         with left_col:
-            st.markdown(f"**📄 원본 주문서: {source_name}**")
+            st.markdown(f"** 원본 주문서: {source_name}**")
             st.dataframe(source_df.head(5), use_container_width=True, height=200)
             st.caption(f"칼럼 {len(source_columns)}개: {', '.join(source_columns[:10])}{'...' if len(source_columns) > 10 else ''}")
 
         with right_col:
-            st.markdown(f"**📄 {selected_vendor} 양식**")
+            st.markdown(f"** {selected_vendor} 양식**")
             if vendor_form_df is not None:
                 st.dataframe(vendor_form_df.head(5), use_container_width=True, height=200)
             else:
@@ -161,7 +161,7 @@ def render_mapping_tab():
 
 def _render_classification_mode(source_name, source_columns):
     """분류 기준 칼럼 선택 모드 UI — 원본 파일 칼럼만 표시, 클릭으로 선택"""
-    st.markdown("### 🎯 분류 기준 칼럼 선택")
+    st.markdown("###  분류 기준 칼럼 선택")
     st.caption("원본 주문서의 칼럼 중 업체 분류에 사용할 칼럼을 **클릭**하세요. "
                "이 칼럼의 값에 업체 키워드가 포함되어 있으면 해당 업체로 분류됩니다.")
 
@@ -178,7 +178,7 @@ def _render_classification_mode(source_name, source_columns):
     selected_col = st.session_state[session_key]
 
     # ── 칼럼 버튼 그리드 (원본파일 칼럼만 표시, 데이터 없음) ──
-    st.markdown("**📄 원본 주문서 칼럼** — 칼럼을 클릭하여 분류 기준을 선택하세요")
+    st.markdown("** 원본 주문서 칼럼** — 칼럼을 클릭하여 분류 기준을 선택하세요")
 
     # 5열 그리드로 칼럼 버튼 배치
     cols_per_row = 5
@@ -188,7 +188,7 @@ def _render_classification_mode(source_name, source_columns):
             with row_cols[i]:
                 is_selected = (col == selected_col)
                 btn_type = "primary" if is_selected else "secondary"
-                label = f"✅ {col}" if is_selected else col
+                label = f" {col}" if is_selected else col
                 if st.button(
                     label,
                     key=f"class_col_{source_name}_{row_start + i}",
@@ -200,25 +200,25 @@ def _render_classification_mode(source_name, source_columns):
 
     # ── 선택 결과 표시 + 저장 ──
     if selected_col:
-        st.success(f"✅ '{selected_col}' 칼럼이 분류 기준으로 선택되었습니다.")
+        st.success(f" '{selected_col}' 칼럼이 분류 기준으로 선택되었습니다.")
         st.caption(f"예: '{selected_col}' 칼럼 값에 '강화'가 포함되면 → 강화군농협으로 분류")
 
-        if st.button("💾 분류 기준 저장", key="save_classification", type="primary", use_container_width=True):
+        if st.button(" 분류 기준 저장", key="save_classification", type="primary", use_container_width=True):
             if source_name not in mapping_config.get("source_types", {}):
                 mapping_config.setdefault("source_types", {})[source_name] = {}
             mapping_config["source_types"][source_name]["classification_column"] = selected_col
             _save_mapping_config(mapping_config)
-            st.success(f"✅ '{source_name}'의 분류 기준 칼럼이 '{selected_col}'로 저장되었습니다.")
+            st.success(f" '{source_name}'의 분류 기준 칼럼이 '{selected_col}'로 저장되었습니다.")
     else:
-        st.info("👆 위에서 칼럼을 클릭하여 분류 기준을 선택하세요.")
+        st.info(" 위에서 칼럼을 클릭하여 분류 기준을 선택하세요.")
 
 
 def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendor_columns):
     """칼럼 매핑 모드 UI"""
-    st.markdown("### 🔗 칼럼 매핑")
+    st.markdown("###  칼럼 매핑")
     st.caption("원본 주문서의 칼럼을 업체 양식의 칼럼에 매핑하세요. "
                "왼쪽(원본)에서 칼럼을 선택하고, 오른쪽(업체)에서 대응 칼럼을 선택합니다. "
-               "**'❌ 해당 없음'**을 선택하면 직접 고정값을 입력할 수 있습니다.")
+               "**' 해당 없음'**을 선택하면 직접 고정값을 입력할 수 있습니다.")
 
     # 현재 매핑 로드
     mapping_config = _load_mapping_config()
@@ -238,10 +238,10 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
     current_mapping = st.session_state[session_key]
     current_constant_values = st.session_state[const_session_key]
 
-    _NA_OPTION = "❌ 해당 없음"
+    _NA_OPTION = " 해당 없음"
 
     # 새 매핑 추가 UI
-    st.markdown("#### ➕ 매핑 추가")
+    st.markdown("####  매핑 추가")
     map_col1, map_col2, map_col3 = st.columns([2, 2, 1])
 
     with map_col1:
@@ -258,13 +258,13 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
         )
     with map_col3:
         st.markdown("<br>", unsafe_allow_html=True)
-        add_mapping = st.button("➕ 추가", key="add_mapping_btn")
+        add_mapping = st.button(" 추가", key="add_mapping_btn")
 
     # "해당 없음" 선택 시 고정값 입력 필드 표시
     custom_value = ""
     if src_col == _NA_OPTION:
         custom_value = st.text_input(
-            "📝 고정값 입력",
+            " 고정값 입력",
             placeholder="이 업체 칼럼에 항상 들어갈 값을 입력하세요",
             help="예: CJ대한통운, 2025-01-01 등",
             key="map_custom_value"
@@ -272,13 +272,13 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
 
     if add_mapping:
         if dst_col == "(선택)":
-            st.warning("⚠️ 업체 칼럼을 선택하세요.")
+            st.warning(" 업체 칼럼을 선택하세요.")
         elif src_col == "(선택)":
-            st.warning("⚠️ 원본 칼럼을 선택하거나 '해당 없음'을 선택하세요.")
+            st.warning(" 원본 칼럼을 선택하거나 '해당 없음'을 선택하세요.")
         elif src_col == _NA_OPTION:
             # 고정값 매핑
             if not custom_value.strip():
-                st.warning("⚠️ 고정값을 입력하세요.")
+                st.warning(" 고정값을 입력하세요.")
             else:
                 current_constant_values[dst_col] = custom_value.strip()
                 st.session_state[const_session_key] = current_constant_values
@@ -292,12 +292,12 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
     # 현재 매핑 & 고정값 테이블
     has_any = bool(current_mapping) or bool(current_constant_values)
     if has_any:
-        st.markdown("#### 📋 현재 매핑 관계")
+        st.markdown("####  현재 매핑 관계")
         mapping_rows = []
         for src, dst in current_mapping.items():
             mapping_rows.append({"원본 칼럼": src, "→": "→", "업체 칼럼": dst, "유형": "칼럼 매핑"})
         for dst, val in current_constant_values.items():
-            mapping_rows.append({"원본 칼럼": f"✏️ \"{val}\"", "→": "→", "업체 칼럼": dst, "유형": "고정값"})
+            mapping_rows.append({"원본 칼럼": f" \"{val}\"", "→": "→", "업체 칼럼": dst, "유형": "고정값"})
 
         st.dataframe(
             pd.DataFrame(mapping_rows),
@@ -306,19 +306,19 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
         )
 
         # 개별 매핑 삭제
-        st.markdown("#### 🗑️ 매핑 삭제")
+        st.markdown("####  매핑 삭제")
         delete_options = [f"{src} → {dst}" for src, dst in current_mapping.items()]
-        delete_options += [f"✏️ \"{val}\" → {dst} (고정값)" for dst, val in current_constant_values.items()]
+        delete_options += [f" \"{val}\" → {dst} (고정값)" for dst, val in current_constant_values.items()]
         to_delete = st.multiselect(
             "삭제할 매핑 선택",
             options=delete_options,
             key="delete_mapping_select"
         )
 
-        if to_delete and st.button("🗑️ 선택 매핑 삭제", key="delete_mapping_btn"):
+        if to_delete and st.button(" 선택 매핑 삭제", key="delete_mapping_btn"):
             for item in to_delete:
                 if "(고정값)" in item:
-                    # 고정값 삭제: '✏️ "val" → dst (고정값)' 형식에서 dst 추출
+                    # 고정값 삭제: ' "val" → dst (고정값)' 형식에서 dst 추출
                     dst = item.split(" → ")[1].replace(" (고정값)", "")
                     current_constant_values.pop(dst, None)
                 else:
@@ -333,7 +333,7 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
         # 매핑 저장
         save_col1, save_col2 = st.columns([1, 1])
         with save_col1:
-            if st.button("💾 매핑 저장", key="save_mapping", type="primary", use_container_width=True):
+            if st.button(" 매핑 저장", key="save_mapping", type="primary", use_container_width=True):
                 # mapping_config.json에 저장
                 mapping_config.setdefault("source_types", {})
                 if source_name not in mapping_config["source_types"]:
@@ -357,11 +357,11 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
                         pass  # 갱신 실패해도 mapping_config는 저장됨
 
                 total = len(current_mapping) + len(current_constant_values)
-                st.success(f"✅ '{source_name}' → '{vendor_name}' 매핑이 저장되었습니다! "
+                st.success(f" '{source_name}' → '{vendor_name}' 매핑이 저장되었습니다! "
                            f"(칼럼 매핑 {len(current_mapping)}개, 고정값 {len(current_constant_values)}개)")
 
         with save_col2:
-            if st.button("🔄 초기화", key="reset_mapping", use_container_width=True):
+            if st.button(" 초기화", key="reset_mapping", use_container_width=True):
                 st.session_state[session_key] = {}
                 st.session_state[const_session_key] = {}
                 st.rerun()
@@ -378,10 +378,10 @@ def _show_existing_mappings():
         return
 
     st.divider()
-    st.markdown("### 📋 저장된 매핑 설정")
+    st.markdown("###  저장된 매핑 설정")
 
     for source_name, source_config in source_types.items():
-        with st.expander(f"📄 {source_name}", expanded=False):
+        with st.expander(f" {source_name}", expanded=False):
             # 분류 기준
             classification_col = source_config.get("classification_column", "")
             if classification_col:

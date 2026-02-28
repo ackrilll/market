@@ -188,14 +188,13 @@
     /* ── 삭제 버튼 ── */
     .delete-btn {
       display: none;
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
+      padding: 6px 14px;
+      margin-bottom: 6px;
       border: none;
       border-radius: 6px;
       background: #ff4b4b;
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
@@ -206,7 +205,7 @@
     }
 
     .delete-btn.visible {
-      display: block;
+      display: inline-block;
     }
 
     /* ── 상태 메시지 ── */
@@ -229,6 +228,10 @@
 
 <body>
   <div id="root">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <button class="delete-btn" id="deleteBtn" onclick="deleteSelected()"></button>
+      <span id="vendorCount" style="font-size:13px; color:#888;"></span>
+    </div>
     <table class="vendor-table">
       <thead>
         <tr>
@@ -241,7 +244,6 @@
       <tbody id="tableBody"></tbody>
     </table>
     <button class="add-row-btn" id="addRowBtn" onclick="addRow()">+ 새 업체 추가</button>
-    <button class="delete-btn" id="deleteBtn" onclick="deleteSelected()">🗑️ 선택한 업체 삭제</button>
     <div class="status-msg" id="statusMsg"></div>
   </div>
 
@@ -333,24 +335,11 @@
       if (row.form_file) {
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
-        nameSpan.textContent = "📄 " + row.form_file;
+        nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file;
         zone.appendChild(nameSpan);
-
-        const clearBtn = document.createElement("button");
-        clearBtn.className = "clear-btn";
-        clearBtn.textContent = "✕";
-        clearBtn.title = "파일 제거";
-        clearBtn.onclick = (e) => {
-          e.stopPropagation();
-          row.form_file = "";
-          row._file_removed = true;
-          renderTable();
-          sendValue();  // 즉시 전송
-        };
-        zone.appendChild(clearBtn);
       } else {
-        zone.textContent = "📂 파일을 드래그하거나 클릭";
+        zone.textContent = "파일을 드래그하거나 클릭";
       }
 
       // 숨겨진 파일 입력
@@ -429,10 +418,16 @@
 
     function updateDeleteBtn() {
       const btn = document.getElementById("deleteBtn");
-      const count = rows.filter(r => r.selected).length;
-      if (count > 0) {
+      const countEl = document.getElementById("vendorCount");
+      const selectedCount = rows.filter(r => r.selected).length;
+      const totalCount = rows.filter(r => !r._is_new || (r._is_new && r.name)).length;
+
+      // 업체 수 표시
+      countEl.textContent = "등록된 업체: " + totalCount + "개";
+
+      if (selectedCount > 0) {
         btn.className = "delete-btn visible";
-        btn.textContent = "🗑️ 선택한 " + count + "개 업체 삭제";
+        btn.textContent = "선택한 " + selectedCount + "개 업체 삭제";
       } else {
         btn.className = "delete-btn";
       }

@@ -197,7 +197,7 @@ def render_convert_tab():
     current_nh_list = get_nh_list()
 
     uploaded_file = st.file_uploader(
-        "📂 사방넷 통합 주문내역 엑셀 파일 (.xlsx)",
+        " 사방넷 통합 주문내역 엑셀 파일 (.xlsx)",
         type=["xlsx"],
         help="파일명에 날짜가 포함된 경우 (예: 주문내역_20250126.xlsx) 자동으로 추출합니다."
     )
@@ -219,21 +219,21 @@ def render_convert_tab():
         
         st.markdown(f"""
         <div class="file-info-card">
-            📄 <strong>{file_name_str}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
-            📅 날짜: <strong>{formatted_date}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
-            📊 주문 <strong>{len(raw_df_preview):,}건</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
-            📋 컬럼 <strong>{len(raw_df_preview.columns)}개</strong>
+             <strong>{file_name_str}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
+             날짜: <strong>{formatted_date}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
+             주문 <strong>{len(raw_df_preview):,}건</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
+             컬럼 <strong>{len(raw_df_preview.columns)}개</strong>
         </div>
         """, unsafe_allow_html=True)
         
         # 데이터 미리보기 (접기/펴기)
-        with st.expander("👀 원본 데이터 미리보기", expanded=False):
+        with st.expander(" 원본 데이터 미리보기", expanded=False):
             st.dataframe(raw_df_preview.head(10), use_container_width=True, height=300)
             if len(raw_df_preview) > 10:
                 st.caption(f"상위 10건만 표시 (전체 {len(raw_df_preview):,}건)")
         
         # ── 업체 선택 ──
-        with st.expander("🏭 업체 선택", expanded=True):
+        with st.expander(" 업체 선택", expanded=True):
             
             # 우선 배치 업체 (관인농협, 오덕쌀, 영광군농협, 한국라이스텍)
             priority_names = ['관인농협', '오덕쌀', '영광군농협', '한국라이스텍']
@@ -244,12 +244,12 @@ def render_convert_tab():
             # 전체 선택/해제 버튼
             btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 3])
             with btn_col1:
-                if st.button("✅ 전체 선택", key="btn_select_all", use_container_width=True):
+                if st.button(" 전체 선택", key="btn_select_all", use_container_width=True):
                     for i in ordered_indices:
                         st.session_state[f'vendor_chk_{i}'] = True
                     st.rerun()
             with btn_col2:
-                if st.button("❌ 전체 해제", key="btn_deselect_all", use_container_width=True):
+                if st.button(" 전체 해제", key="btn_deselect_all", use_container_width=True):
                     for i in ordered_indices:
                         st.session_state[f'vendor_chk_{i}'] = False
                     st.rerun()
@@ -277,13 +277,13 @@ def render_convert_tab():
         
         # 선택 현황 안내
         if not selected_vendors:
-            st.warning("⚠️ 선택된 업체가 없습니다. 선택되지 않은 업체의 데이터는 처리되지 않습니다.")
+            st.warning(" 선택된 업체가 없습니다. 선택되지 않은 업체의 데이터는 처리되지 않습니다.")
         else:
-            st.info(f"🏭 **{len(selected_vendors)}개** 업체가 선택되었습니다.")
+            st.info(f" **{len(selected_vendors)}개** 업체가 선택되었습니다.")
         
 
         # ── 변환 실행 ──
-        if st.button("🚀 변환 및 압축파일 생성", type="primary", use_container_width=True):
+        if st.button(" 변환 및 압축파일 생성", type="primary", use_container_width=True):
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
             OUTPUT_DIR = os.path.join(BASE_DIR, "data", "converted")
             try:
@@ -310,7 +310,7 @@ def render_convert_tab():
 
                 with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
                     # 분류 정보 파일 생성
-                    progress_bar.progress(0, text="📋 분류 정보 파일 생성 중...")
+                    progress_bar.progress(0, text=" 분류 정보 파일 생성 중...")
                     try:
                         sort_info_bytes = create_sort_info_file(raw_df)
                         sort_info_filename = f"00_원본파일_분류정보_{formatted_date}.xlsx"
@@ -318,12 +318,12 @@ def render_convert_tab():
                         with open(os.path.join(OUTPUT_DIR, sort_info_filename), "wb") as f:
                             f.write(sort_info_bytes)
                     except Exception as e:
-                        st.warning(f"⚠️ 분류 정보 파일 생성 실패 (변환은 계속됩니다): {e}")
+                        st.warning(f" 분류 정보 파일 생성 실패 (변환은 계속됩니다): {e}")
 
                     for step_idx, (idx, company_name, sorted_data) in enumerate(sorted_data_list):
                         # 프로그레스 바 업데이트
                         progress = (step_idx + 1) / total_steps
-                        progress_bar.progress(progress, text=f"🔄 {company_name} 처리 중... ({step_idx + 1}/{len(sorted_data_list)})")
+                        progress_bar.progress(progress, text=f" {company_name} 처리 중... ({step_idx + 1}/{len(sorted_data_list)})")
                         
                         # [분기 처리]
                         if company_name not in selected_vendors:
@@ -426,11 +426,11 @@ def render_convert_tab():
                             continue
 
                 # 프로그레스 완료
-                progress_bar.progress(1.0, text="✅ 변환 완료!")
+                progress_bar.progress(1.0, text=" 변환 완료!")
                 
                 # ── 결과 대시보드 ──
                 st.divider()
-                st.subheader("📊 변환 결과")
+                st.subheader(" 변환 결과")
                 
                 # 결과 메트릭 카드
                 m_col1, m_col2, m_col3 = st.columns(3)
@@ -459,7 +459,7 @@ def render_convert_tab():
                 
                 # 실패한 업체가 있으면 상세 경고
                 if failed_vendors:
-                    st.error(f"❌ {len(failed_vendors)}개 업체 변환 실패:")
+                    st.error(f" {len(failed_vendors)}개 업체 변환 실패:")
                     for vendor_name, error_msg in failed_vendors:
                         st.caption(f"  • **{vendor_name}**: {error_msg}")
                 
@@ -469,7 +469,7 @@ def render_convert_tab():
                     dl_col1, dl_col2 = st.columns([2, 1])
                     with dl_col1:
                         st.download_button(
-                            label=f"🎁 {formatted_date} 결과물 다운로드 (ZIP)",
+                            label=f" {formatted_date} 결과물 다운로드 (ZIP)",
                             data=zip_buffer.getvalue(),
                             file_name=f"365_주문서_결과물_{formatted_date}.zip",
                             mime="application/zip",
@@ -477,10 +477,10 @@ def render_convert_tab():
                             type="primary"
                         )
                     with dl_col2:
-                        st.caption(f"💾 로컬 저장 완료\n\n`{OUTPUT_DIR}`")
+                        st.caption(f" 로컬 저장 완료\n\n`{OUTPUT_DIR}`")
                     st.balloons()
                 else:
-                    st.info("⚠️ 생성된 파일이 없습니다. (선택된 업체에 데이터가 없습니다)")
+                    st.info(" 생성된 파일이 없습니다. (선택된 업체에 데이터가 없습니다)")
 
             except Exception as e:
                 st.error(f"치명적 오류 발생: {e}")
@@ -492,7 +492,7 @@ def render_convert_tab():
 def main():
     st.set_page_config(
         page_title="365 건강농산 주문서 변환기",
-        page_icon="🌾",
+        page_icon="",
         layout="wide",
         initial_sidebar_state="expanded"
     )
@@ -502,14 +502,14 @@ def main():
     # ── 사이드바: 시스템 정보 ──
     current_nh_list = get_nh_list()
     with st.sidebar:
-        st.markdown("### 🌾 365 건강농산")
+        st.markdown("###  365 건강농산")
         st.markdown("주문서 변환 시스템")
         st.divider()
         
         # 등록 업체 수
         st.markdown(f"""
         <div class="sidebar-info">
-            📋 <strong>등록 업체</strong>: {len(current_nh_list)}개<br>
+             <strong>등록 업체</strong>: {len(current_nh_list)}개<br>
         </div>
         """, unsafe_allow_html=True)
         
@@ -519,17 +519,17 @@ def main():
     # ── 메인 헤더 ──
     st.markdown("""
     <div class="main-header">
-        <h1>🌾 365 건강농산 주문서 변환기</h1>
+        <h1> 365 건강농산 주문서 변환기</h1>
         <p>사방넷 통합 주문내역을 업체별 양식으로 자동 변환합니다</p>
     </div>
     """, unsafe_allow_html=True)
 
     # ── 탭 구조 ──
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📋 주문서 변환",
-        "🏭 업체 관리",
-        "🔄 주문 변환 매핑",
-        "👁️ 변환 미리보기",
+        " 주문서 변환",
+        " 업체 관리",
+        " 주문 변환 매핑",
+        " 변환 미리보기",
     ])
 
     with tab1:

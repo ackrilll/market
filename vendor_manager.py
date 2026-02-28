@@ -87,7 +87,7 @@ def _get_form_file_path(form_filename):
 
 def render_vendor_tab():
     """업체 관리 탭 UI를 렌더링합니다."""
-    st.subheader("🏭 업체 관리")
+    st.subheader("업체 관리")
     st.caption("테이블에서 직접 업체를 추가·수정하고, 양식 파일을 셀에 드래그 앤 드롭할 수 있습니다.")
 
     vendors = get_all_vendors()
@@ -108,7 +108,7 @@ def render_vendor_tab():
             except ValueError:
                 pass  # 이미 삭제된 ID — 무시
             except Exception as e:
-                st.error(f"⚠️ 삭제 실패: {e}")
+                st.error(f"삭제 실패: {e}")
 
         # 2) 행 데이터 처리 (수정/추가/파일 업로드)
         result_rows = result.get("rows", [])
@@ -145,7 +145,7 @@ def render_vendor_tab():
                 except ValueError:
                     pass  # 이미 존재하는 업체 — 무시
                 except Exception as e:
-                    st.error(f"⚠️ '{name}' 추가 실패: {e}")
+                    st.error(f"'{name}' 추가 실패: {e}")
                 continue
 
             # 기존 업체 수정
@@ -174,7 +174,7 @@ def render_vendor_tab():
                         if cols:
                             updates["target_columns"] = cols
                     except Exception as e:
-                        st.error(f"⚠️ 파일 저장 실패: {e}")
+                        st.error(f"파일 저장 실패: {e}")
 
                 # 파일 제거 처리
                 file_removed = row.get("_file_removed", False)
@@ -186,7 +186,7 @@ def render_vendor_tab():
                         update_vendor_in_config(row_id, updates)
                         changes_applied = True
                     except Exception as e:
-                        st.error(f"⚠️ 수정 실패: {e}")
+                        st.error(f"수정 실패: {e}")
 
         if changes_applied:
             reload_config()

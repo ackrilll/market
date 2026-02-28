@@ -15,8 +15,8 @@ from map import (
 
 def render_keyword_tab():
     """키워드 관리 탭 UI를 렌더링합니다."""
-    st.subheader("🏷️ 키워드 관리")
-    st.caption("업체별 분류 키워드를 인라인으로 편집합니다. 키워드를 수정한 뒤 **💾 변경사항 저장** 버튼을 누르세요.")
+    st.subheader(" 키워드 관리")
+    st.caption("업체별 분류 키워드를 인라인으로 편집합니다. 키워드를 수정한 뒤 ** 변경사항 저장** 버튼을 누르세요.")
 
     vendors = get_all_vendors()
     if not vendors:
@@ -26,7 +26,7 @@ def render_keyword_tab():
     # ── 업체 선택 ──
     vendor_names = [v["name"] for v in vendors]
     selected_name = st.selectbox(
-        "🏭 업체 선택",
+        " 업체 선택",
         options=vendor_names,
         key="kw_vendor_select",
     )
@@ -80,32 +80,32 @@ def render_keyword_tab():
     has_changes = new_keywords != current_keywords
 
     if has_changes:
-        st.info("✏️ 키워드가 수정되었습니다. 저장 버튼을 눌러 적용하세요.")
+        st.info(" 키워드가 수정되었습니다. 저장 버튼을 눌러 적용하세요.")
 
     # 저장 버튼
     save_col, reset_col = st.columns([2, 1])
     with save_col:
         save_disabled = not has_changes or len(new_keywords) == 0
         if st.button(
-            "💾 변경사항 저장",
+            " 변경사항 저장",
             type="primary",
             use_container_width=True,
             disabled=save_disabled,
             key=f"kw_save_{vendor_id}",
         ):
             if not new_keywords:
-                st.error("⚠️ 최소 1개 이상의 키워드가 필요합니다.")
+                st.error(" 최소 1개 이상의 키워드가 필요합니다.")
             else:
                 try:
                     update_vendor_keywords(vendor_id, new_keywords)
                     reload_config()
-                    st.success(f"✅ **{selected_name}**의 키워드가 저장되었습니다. ({len(new_keywords)}개)")
+                    st.success(f" **{selected_name}**의 키워드가 저장되었습니다. ({len(new_keywords)}개)")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ 저장 실패: {e}")
+                    st.error(f" 저장 실패: {e}")
 
     with reset_col:
-        if st.button("↩️ 초기화", use_container_width=True, key=f"kw_reset_{vendor_id}"):
+        if st.button("↩ 초기화", use_container_width=True, key=f"kw_reset_{vendor_id}"):
             st.rerun()
 
     if not has_changes:
@@ -113,7 +113,7 @@ def render_keyword_tab():
 
     # ── 전체 키워드 현황 (읽기 전용) ──
     st.divider()
-    with st.expander("📊 전체 업체 키워드 현황", expanded=False):
+    with st.expander(" 전체 업체 키워드 현황", expanded=False):
         all_data = []
         for v in vendors:
             keywords = v.get("keywords", [v["name"]])

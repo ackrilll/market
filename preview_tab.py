@@ -71,7 +71,7 @@ def _apply_conversion_pipeline(source_df, vendor_id, vendor_name):
 
 def render_preview_tab():
     """변환 미리보기 탭 UI를 렌더링합니다."""
-    st.subheader("👁️ 변환 미리보기")
+    st.subheader(" 변환 미리보기")
     st.caption("엑셀 파일을 업로드하고 업체를 선택하면, 해당 업체 양식으로 변환된 결과를 미리 확인할 수 있습니다.")
 
     vendors = get_all_vendors()
@@ -80,7 +80,7 @@ def render_preview_tab():
         return
 
     # ── 1. 파일 업로드 ──
-    st.markdown("### 📄 원본 주문서 업로드")
+    st.markdown("###  원본 주문서 업로드")
     uploaded_file = st.file_uploader(
         "원본 주문서 엑셀 파일 (.xlsx)",
         type=["xlsx", "xls"],
@@ -89,7 +89,7 @@ def render_preview_tab():
     )
 
     if uploaded_file is None:
-        st.info("👆 원본 주문서 파일을 업로드하세요.")
+        st.info(" 원본 주문서 파일을 업로드하세요.")
         return
 
     # 파일 읽기
@@ -97,26 +97,26 @@ def render_preview_tab():
         uploaded_file.seek(0)
         raw_df = pd.read_excel(uploaded_file)
     except Exception as e:
-        st.error(f"❌ 파일 읽기 실패: {e}")
+        st.error(f" 파일 읽기 실패: {e}")
         return
 
-    st.success(f"✅ 파일 로드 완료 — {len(raw_df)}행 × {len(raw_df.columns)}열")
+    st.success(f" 파일 로드 완료 — {len(raw_df)}행 × {len(raw_df.columns)}열")
 
     # ── 2. 업체 선택 ──
-    st.markdown("### 🏭 목표 업체 선택")
+    st.markdown("###  목표 업체 선택")
 
     # 분류 실행하여 어떤 업체 데이터가 있는지 확인
     try:
         sorted_data_list = sort_data(raw_df.copy())
     except Exception as e:
-        st.error(f"❌ 분류 실패: {e}")
+        st.error(f" 분류 실패: {e}")
         return
 
     if not sorted_data_list:
-        st.warning("⚠️ 원본 파일에서 분류할 수 있는 업체 데이터가 없습니다. "
+        st.warning(" 원본 파일에서 분류할 수 있는 업체 데이터가 없습니다. "
                    "분류 기준 칼럼과 키워드 설정을 확인하세요.")
         # 파일 컬럼 정보 표시
-        with st.expander("📋 원본 파일 칼럼 확인"):
+        with st.expander(" 원본 파일 칼럼 확인"):
             st.write(list(raw_df.columns))
         return
 
@@ -137,12 +137,12 @@ def render_preview_tab():
     vendor_id, vendor_name, vendor_df = available_vendors[selected_idx]
 
     # ── 3. 원본 데이터 (분류된 것) 표시 ──
-    st.markdown("### 📊 미리보기")
+    st.markdown("###  미리보기")
 
     col_before, col_after = st.columns(2)
 
     with col_before:
-        st.markdown(f"**📄 원본 데이터 ({vendor_name}, {len(vendor_df)}건)**")
+        st.markdown(f"** 원본 데이터 ({vendor_name}, {len(vendor_df)}건)**")
         st.dataframe(
             vendor_df.head(20),
             use_container_width=True,
@@ -156,11 +156,11 @@ def render_preview_tab():
         converted_df = _apply_conversion_pipeline(vendor_df, vendor_id, vendor_name)
     except Exception as e:
         with col_after:
-            st.error(f"❌ 변환 실패: {e}")
+            st.error(f" 변환 실패: {e}")
         return
 
     with col_after:
-        st.markdown(f"**✅ 변환 결과 ({vendor_name} 양식, {len(converted_df)}건)**")
+        st.markdown(f"** 변환 결과 ({vendor_name} 양식, {len(converted_df)}건)**")
         st.dataframe(
             converted_df.head(20),
             use_container_width=True,
@@ -171,7 +171,7 @@ def render_preview_tab():
 
     # ── 5. 변환 요약 ──
     st.divider()
-    st.markdown("### 📋 변환 요약")
+    st.markdown("###  변환 요약")
 
     rename_map = get_ganghwagun_rename_map(vendor_id)
     target_columns = get_ganghwagun_target_columns(vendor_id)
@@ -181,21 +181,21 @@ def render_preview_tab():
     summary_col1, summary_col2, summary_col3 = st.columns(3)
 
     with summary_col1:
-        st.metric("📊 데이터 건수", f"{len(converted_df)}건")
-        st.metric("📋 출력 칼럼 수", f"{len(target_columns)}개")
+        st.metric(" 데이터 건수", f"{len(converted_df)}건")
+        st.metric(" 출력 칼럼 수", f"{len(target_columns)}개")
 
     with summary_col2:
-        st.metric("🔄 칼럼 매핑", f"{len(rename_map)}개")
-        st.metric("📋 값 복제", f"{len(copy_map)}개")
+        st.metric(" 칼럼 매핑", f"{len(rename_map)}개")
+        st.metric(" 값 복제", f"{len(copy_map)}개")
 
     with summary_col3:
-        st.metric("✏️ 고정값", f"{len(constant_map)}개")
+        st.metric(" 고정값", f"{len(constant_map)}개")
         if constant_map:
             const_items = [f"`{k}` = `{v}`" for k, v in constant_map.items()]
             st.caption(" · ".join(const_items))
 
     # ── 6. 상세 설정 확인 (접히는 영역) ──
-    with st.expander("🔍 적용된 설정 상세", expanded=False):
+    with st.expander(" 적용된 설정 상세", expanded=False):
         detail_col1, detail_col2 = st.columns(2)
 
         with detail_col1:
