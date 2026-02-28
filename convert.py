@@ -755,22 +755,45 @@ def main():
                 </svg>
                 <div class="overlay">
                     <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-                </div>
             </div>
             <div class="name">365건강농산</div>
             <div class="role">주문서 관리자</div>
         </div>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
         <script>
             var avatar = document.getElementById('avatarDrop');
             var defaultIcon = document.getElementById('defaultIcon');
-            // 저장된 이미지 복원
-            var saved = localStorage.getItem('profile_avatar');
-            if (saved) {
+            var fileInput = document.getElementById('avatarFileInput');
+
+            function setAvatarImage(dataUrl) {
+                localStorage.setItem('profile_avatar', dataUrl);
+                var existing = avatar.querySelector('img');
+                if (existing) existing.remove();
                 var img = document.createElement('img');
-                img.src = saved;
+                img.src = dataUrl;
                 defaultIcon.style.display = 'none';
                 avatar.insertBefore(img, avatar.firstChild);
             }
+
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { setAvatarImage(ev.target.result); };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // 저장된 이미지 복원
+            var saved = localStorage.getItem('profile_avatar');
+            if (saved) { setAvatarImage(saved); }
+
+            // 클릭 시 파일 선택
+            avatar.addEventListener('click', function() { fileInput.click(); });
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files[0]) handleFile(e.target.files[0]);
+            });
+
+            // 드래그 앤 드롭
             avatar.addEventListener('dragover', function(e) {
                 e.preventDefault(); avatar.classList.add('dragover');
             });
@@ -779,20 +802,7 @@ def main():
             });
             avatar.addEventListener('drop', function(e) {
                 e.preventDefault(); avatar.classList.remove('dragover');
-                var file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    var reader = new FileReader();
-                    reader.onload = function(ev) {
-                        localStorage.setItem('profile_avatar', ev.target.result);
-                        var existing = avatar.querySelector('img');
-                        if (existing) existing.remove();
-                        var img = document.createElement('img');
-                        img.src = ev.target.result;
-                        defaultIcon.style.display = 'none';
-                        avatar.insertBefore(img, avatar.firstChild);
-                    };
-                    reader.readAsDataURL(file);
-                }
+                handleFile(e.dataTransfer.files[0]);
             });
         </script>
         """, height=170)
