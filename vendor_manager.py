@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import base64
 import io
+import streamlit.components.v1 as stc
 from map import (
     get_all_vendors,
     get_vendor_by_name,
@@ -112,7 +113,8 @@ def render_vendor_tab():
                 type="primary",
             )
             # 자동 클릭으로 즉시 다운로드 트리거
-            st.markdown("""<script>
+            stc.html("""
+            <script>
             setTimeout(function() {
                 var btns = window.parent.document.querySelectorAll('button[data-testid="stBaseButton-primary"]');
                 for (var i = 0; i < btns.length; i++) {
@@ -121,8 +123,9 @@ def render_vendor_tab():
                         break;
                     }
                 }
-            }, 200);
-            </script>""", unsafe_allow_html=True)
+            }, 300);
+            </script>
+            """, height=0)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
