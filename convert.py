@@ -194,12 +194,19 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
         display: none !important;
     }
-    /* 사이드바 내 캐프션/디바이더 색상 */
+    /* 사이드바 내 캡션/디바이더 색상 */
     section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] small {
-        color: #8a919a !important;
+        color: #adb5bd !important;
     }
     section[data-testid="stSidebar"] hr {
         border-color: #3a3e4a !important;
+    }
+    /* 사이드바 내 모든 텍스트 흰색 */
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] label {
+        color: #fff !important;
     }
 
     /* ── 메인 헤더 (기존 카드 타입) ── */
