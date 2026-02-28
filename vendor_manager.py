@@ -142,6 +142,8 @@ def render_vendor_tab():
                             update_vendor_in_config(new_id, updates)
                         except Exception:
                             pass
+                except ValueError:
+                    pass  # 이미 존재하는 업체 — 무시
                 except Exception as e:
                     st.error(f"⚠️ '{name}' 추가 실패: {e}")
                 continue
