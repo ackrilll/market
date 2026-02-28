@@ -192,35 +192,4 @@ def render_vendor_tab():
             reload_config()
             st.rerun()
 
-    # ── 양식 파일 다운로드 ──
-    vendors = get_all_vendors()  # 최신 데이터
-    vendors_with_files = [v for v in vendors if v.get("form_file")]
-    if vendors_with_files:
-        st.divider()
-        st.markdown("### 📥 양식 파일 다운로드")
-        st.caption("클릭하면 해당 업체의 양식 파일을 다운로드합니다.")
-        NUM_COLS = 4
-        cols = st.columns(NUM_COLS)
-        for i, v in enumerate(vendors_with_files):
-            form_file = v["form_file"]
-            form_path = _get_form_file_path(form_file)
-            with cols[i % NUM_COLS]:
-                if form_path:
-                    with open(form_path, "rb") as f:
-                        file_bytes = f.read()
-                    st.download_button(
-                        label=f"📄 {v['name']}",
-                        data=file_bytes,
-                        file_name=form_file,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"dl_form_{v['id']}",
-                        use_container_width=True,
-                    )
-                else:
-                    st.button(
-                        f"⚠️ {v['name']}",
-                        disabled=True,
-                        key=f"dl_form_missing_{v['id']}",
-                        use_container_width=True,
-                    )
 

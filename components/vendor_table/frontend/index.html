@@ -343,7 +343,7 @@
           row.form_file = "";
           row._file_removed = true;
           renderTable();
-          debounceSendValue();
+          sendValue();  // 즉시 전송
         };
         zone.appendChild(clearBtn);
       } else {
