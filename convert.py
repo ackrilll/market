@@ -251,22 +251,23 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
-        padding: 0 0 0 12px !important;
+        padding: 0 12px !important;
         margin: 0 !important;
         width: 100% !important;
+        box-sizing: border-box !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 12px 12px 12px 20px !important;
+        padding: 12px 10px !important;
         margin: 0 !important;
-        border-radius: 0 !important;
+        border-radius: 4px !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #d8dee4 !important;
         cursor: pointer;
         transition: background 0.15s;
-        border-left: 3px solid transparent;
+        border-left: 4px solid transparent;
         min-height: 44px !important;
         box-sizing: border-box !important;
         width: 100% !important;
