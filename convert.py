@@ -272,9 +272,8 @@ def inject_custom_css():
         width: 100% !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
-        background: transparent !important;
+        background: #3e4452 !important;
         color: #fff !important;
-        font-weight: 600 !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
     section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
