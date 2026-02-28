@@ -788,17 +788,37 @@ def main():
             <div class="name">365건강농산</div>
             <div class="role">주문서 관리자</div>
         </div>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
         <script>
             var avatar = document.getElementById('avatarDrop');
             var defaultIcon = document.getElementById('defaultIcon');
-            // 저장된 이미지 복원
-            var saved = localStorage.getItem('profile_avatar');
-            if (saved) {
+            var fileInput = document.getElementById('avatarFileInput');
+
+            function setAvatar(dataUrl) {
+                localStorage.setItem('profile_avatar', dataUrl);
+                var old = avatar.querySelector('img');
+                if (old) old.remove();
                 var img = document.createElement('img');
-                img.src = saved;
+                img.src = dataUrl;
                 defaultIcon.style.display = 'none';
                 avatar.insertBefore(img, avatar.firstChild);
             }
+            function handleFile(file) {
+                if (file && file.type.startsWith('image/')) {
+                    var r = new FileReader();
+                    r.onload = function(e) { setAvatar(e.target.result); };
+                    r.readAsDataURL(file);
+                }
+            }
+            // 저장된 이미지 복원
+            var saved = localStorage.getItem('profile_avatar');
+            if (saved) setAvatar(saved);
+            // 클릭 → 파일 선택
+            avatar.addEventListener('click', function() { fileInput.click(); });
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files[0]) handleFile(e.target.files[0]);
+            });
+            // 드래그 앤 드롭
             avatar.addEventListener('dragover', function(e) {
                 e.preventDefault(); avatar.classList.add('dragover');
             });
@@ -807,20 +827,7 @@ def main():
             });
             avatar.addEventListener('drop', function(e) {
                 e.preventDefault(); avatar.classList.remove('dragover');
-                var file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    var reader = new FileReader();
-                    reader.onload = function(ev) {
-                        localStorage.setItem('profile_avatar', ev.target.result);
-                        var existing = avatar.querySelector('img');
-                        if (existing) existing.remove();
-                        var img = document.createElement('img');
-                        img.src = ev.target.result;
-                        defaultIcon.style.display = 'none';
-                        avatar.insertBefore(img, avatar.firstChild);
-                    };
-                    reader.readAsDataURL(file);
-                }
+                handleFile(e.dataTransfer.files[0]);
             });
         </script>
         """, height=170)
