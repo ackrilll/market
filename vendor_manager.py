@@ -66,7 +66,7 @@ def _get_form_file_path(form_filename):
 def render_vendor_tab():
     """업체 관리 탭 UI를 렌더링합니다."""
     st.subheader("🏭 업체 관리")
-    st.caption("테이블에서 직접 업체를 추가·수정·삭제할 수 있습니다. 변경 후 **💾 변경사항 저장** 버튼을 누르세요.")
+    st.caption("테이블에서 직접 업체를 추가·수정할 수 있습니다. 변경사항은 자동으로 저장됩니다.")
 
     vendors = get_all_vendors()
 
@@ -79,18 +79,19 @@ def render_vendor_tab():
         keywords = ", ".join(v.get("keywords", [v["name"]]))
         form_file = v.get("form_file", "")
         original_rows.append({
+            "선택": False,
             "업체명": v["name"],
-            "키워드": keywords,
+            "분류키워드": keywords,
             "양식 파일": form_file if form_file else "",
         })
         vendor_id_map[i] = v["id"]
 
     original_df = pd.DataFrame(
         original_rows,
-        columns=["업체명", "키워드", "양식 파일"],
+        columns=["선택", "업체명", "분류키워드", "양식 파일"],
     )
 
-    # ── data_editor: 추가/수정/삭제 가능한 통합 테이블 ──
+    # ── data_editor: 추가/수정 가능한 통합 테이블 ──
     edited_df = st.data_editor(
         original_df,
         num_rows="dynamic",
@@ -98,14 +99,19 @@ def render_vendor_tab():
         hide_index=True,
         key="vendor_table_editor",
         column_config={
+            "선택": st.column_config.CheckboxColumn(
+                "선택",
+                help="삭제할 업체를 선택하세요.",
+                default=False,
+            ),
             "업체명": st.column_config.TextColumn(
                 "업체명",
                 help="업체의 이름입니다.",
                 required=True,
                 width="medium",
             ),
-            "키워드": st.column_config.TextColumn(
-                "키워드",
+            "분류키워드": st.column_config.TextColumn(
+                "분류키워드",
                 help="쉼표로 구분된 분류 키워드입니다. 주문서의 상품약어에 이 문자열이 포함되면 해당 업체로 분류됩니다.",
                 required=True,
                 width="large",
@@ -119,106 +125,98 @@ def render_vendor_tab():
         },
     )
 
-    # ── 변경 감지 ──
-    # st.data_editor의 session_state에서 변경 정보 가져오기
+    # ── 선택된 업체 삭제 버튼 ──
+    selected_existing = [
+        idx for idx in range(len(original_rows))
+        if idx < len(edited_df) and edited_df.iloc[idx].get("선택", False)
+        and idx in vendor_id_map
+    ]
+
+    if selected_existing:
+        vendor_names_to_delete = [original_rows[idx]["업체명"] for idx in selected_existing]
+        if st.button(
+            f"🗑️ 선택한 {len(selected_existing)}개 업체 삭제 ({', '.join(vendor_names_to_delete)})",
+            type="secondary",
+            use_container_width=True,
+            key="vendor_delete_selected",
+        ):
+            for idx in sorted(selected_existing, reverse=True):
+                vid = vendor_id_map[idx]
+                try:
+                    remove_vendor_from_config(vid)
+                except Exception as e:
+                    st.error(f"⚠️ '{original_rows[idx]['업체명']}' 삭제 실패: {e}")
+            reload_config()
+            st.success(f"✅ {len(selected_existing)}개 업체가 삭제되었습니다.")
+            st.rerun()
+
+    # ── 자동 저장 ──
     editor_state = st.session_state.get("vendor_table_editor", {})
     edited_rows = editor_state.get("edited_rows", {})
     added_rows = editor_state.get("added_rows", [])
     deleted_rows = editor_state.get("deleted_rows", [])
 
-    has_changes = bool(edited_rows) or bool(added_rows) or bool(deleted_rows)
+    changes_applied = False
 
-    # 변경 요약 표시
-    if has_changes:
-        changes_parts = []
-        if edited_rows:
-            changes_parts.append(f"수정 {len(edited_rows)}건")
-        if added_rows:
-            changes_parts.append(f"추가 {len(added_rows)}건")
-        if deleted_rows:
-            changes_parts.append(f"삭제 {len(deleted_rows)}건")
-        st.info(f"✏️ 변경사항이 있습니다: {', '.join(changes_parts)}")
+    # 1) 내장 행 삭제 처리
+    for row_idx in sorted(deleted_rows, reverse=True):
+        if row_idx in vendor_id_map:
+            vid = vendor_id_map[row_idx]
+            try:
+                remove_vendor_from_config(vid)
+                changes_applied = True
+            except Exception as e:
+                st.error(f"⚠️ 삭제 실패: {e}")
 
-    # ── 저장 / 초기화 버튼 ──
-    save_col, reset_col = st.columns([2, 1])
-    with save_col:
-        if st.button(
-            "💾 변경사항 저장",
-            type="primary",
-            use_container_width=True,
-            disabled=not has_changes,
-            key="vendor_save_all",
-        ):
-            errors = []
-            success_msgs = []
+    # 2) 수정된 행 자동 저장
+    for row_idx_str, changes in edited_rows.items():
+        row_idx = int(row_idx_str)
+        if row_idx in vendor_id_map:
+            # "선택" 체크박스 변경은 저장 대상이 아님
+            data_changes = {k: v for k, v in changes.items() if k != "선택"}
+            if not data_changes:
+                continue
 
-            # 1) 삭제 처리 (역순으로 — 인덱스 밀림 방지)
-            for row_idx in sorted(deleted_rows, reverse=True):
-                if row_idx in vendor_id_map:
-                    vid = vendor_id_map[row_idx]
-                    vname = original_rows[row_idx]["업체명"]
-                    try:
-                        remove_vendor_from_config(vid)
-                        success_msgs.append(f"🗑️ '{vname}' 삭제됨")
-                    except Exception as e:
-                        errors.append(f"'{vname}' 삭제 실패: {e}")
+            vid = vendor_id_map[row_idx]
+            updates = {}
 
-            # 2) 수정 처리
-            for row_idx_str, changes in edited_rows.items():
-                row_idx = int(row_idx_str)
-                if row_idx in vendor_id_map:
-                    vid = vendor_id_map[row_idx]
-                    updates = {}
+            if "업체명" in data_changes:
+                new_name = str(data_changes["업체명"]).strip()
+                if new_name:
+                    updates["name"] = new_name
 
-                    if "업체명" in changes:
-                        new_name = str(changes["업체명"]).strip()
-                        if new_name:
-                            updates["name"] = new_name
+            if "분류키워드" in data_changes:
+                kw_str = str(data_changes["분류키워드"]).strip()
+                if kw_str:
+                    new_kw = [k.strip() for k in kw_str.split(",") if k.strip()]
+                    if new_kw:
+                        updates["keywords"] = new_kw
 
-                    if "키워드" in changes:
-                        kw_str = str(changes["키워드"]).strip()
-                        if kw_str:
-                            new_kw = [k.strip() for k in kw_str.split(",") if k.strip()]
-                            if new_kw:
-                                updates["keywords"] = new_kw
-
-                    if updates:
-                        try:
-                            update_vendor_in_config(vid, updates)
-                            vname = updates.get("name", original_rows[row_idx]["업체명"])
-                            success_msgs.append(f"✏️ '{vname}' 수정됨")
-                        except Exception as e:
-                            errors.append(f"수정 실패 (행 {row_idx + 1}): {e}")
-
-            # 3) 추가 처리
-            for added in added_rows:
-                name = str(added.get("업체명", "")).strip()
-                kw_str = str(added.get("키워드", "")).strip()
-                if not name:
-                    errors.append("업체명이 비어있는 행은 추가할 수 없습니다.")
-                    continue
-                keywords = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else [name]
+            if updates:
                 try:
-                    add_vendor_to_config(name=name, keywords=keywords)
-                    success_msgs.append(f"➕ '{name}' 추가됨")
+                    update_vendor_in_config(vid, updates)
+                    changes_applied = True
                 except Exception as e:
-                    errors.append(f"'{name}' 추가 실패: {e}")
+                    st.error(f"⚠️ 수정 실패: {e}")
 
-            # 결과 표시 및 갱신
-            reload_config()
-            for msg in success_msgs:
-                st.success(msg)
-            for err in errors:
-                st.error(f"⚠️ {err}")
-            if success_msgs:
-                st.rerun()
+    # 3) 추가된 행 자동 저장
+    for added in added_rows:
+        name = str(added.get("업체명", "")).strip()
+        kw_str = str(added.get("분류키워드", "")).strip()
+        if not name:
+            continue  # 업체명 없으면 무시
+        keywords = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else [name]
+        try:
+            add_vendor_to_config(name=name, keywords=keywords)
+            changes_applied = True
+        except Exception as e:
+            st.error(f"⚠️ '{name}' 추가 실패: {e}")
 
-    with reset_col:
-        if st.button("↩️ 초기화", use_container_width=True, key="vendor_reset_all"):
-            st.rerun()
+    if changes_applied:
+        reload_config()
+        st.rerun()
 
-    if not has_changes:
-        st.caption(f"총 {len(vendors)}개 업체 등록됨. 변경사항이 없습니다.")
+    st.caption(f"총 {len(vendors)}개 업체 등록됨")
 
     st.divider()
 
