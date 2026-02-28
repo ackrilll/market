@@ -229,7 +229,7 @@
 
 <body>
   <div id="root">
-    <div id="vendorCount" style="font-size:20px; color:#888; margin-bottom:4px;"></div>
+    <div id="vendorCount" style="font-size:20px; color:#888; margin-bottom:4px; margin-top:0;"></div>
     <div style="min-height:30px; margin-bottom:2px;">
       <button class="delete-btn" id="deleteBtn" onclick="deleteSelected()"></button>
     </div>
@@ -454,7 +454,7 @@
 
       if (selectedCount > 0) {
         btn.className = "delete-btn visible";
-        btn.textContent = "선택한 " + selectedCount + "개 업체 삭제";
+        btn.textContent = "선택 삭제";
       } else {
         btn.className = "delete-btn";
       }
