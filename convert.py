@@ -143,8 +143,8 @@ def inject_custom_css():
 
     /* ── 사이드바 스타일 ── */
     section[data-testid="stSidebar"] {
-        background: #fff;
-        border-right: 1px solid #e8e8e8;
+        background: #2b2f3a;
+        border-right: 1px solid #3a3e4a;
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
@@ -157,24 +157,32 @@ def inject_custom_css():
         border-radius: 0 !important;
         font-size: 14px !important;
         font-weight: 500 !important;
-        color: #333 !important;
+        color: #b0b8c1 !important;
         cursor: pointer;
         transition: background 0.15s;
         border-left: 3px solid transparent;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
-        background: #f5f5f5 !important;
+        background: #363b48 !important;
+        color: #e0e0e0 !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
     section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
-        background: #e8f5e9 !important;
-        color: #03C75A !important;
+        background: #363b48 !important;
+        color: #fff !important;
         font-weight: 600 !important;
         border-left: 3px solid #03C75A;
     }
     /* 라디오 버튼 원형 숨김 */
     section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
         display: none !important;
+    }
+    /* 사이드바 내 캐프션/디바이더 색상 */
+    section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] small {
+        color: #8a919a !important;
+    }
+    section[data-testid="stSidebar"] hr {
+        border-color: #3a3e4a !important;
     }
 
     /* ── 메인 헤더 (기존 카드 타입) ── */
@@ -588,7 +596,7 @@ def main():
     with st.sidebar:
         st.markdown("""
         <div style="padding:16px 0 8px 0;">
-            <span style="font-size:22px; font-weight:700; color:#222;">365 건강농산</span>
+            <span style="font-size:22px; font-weight:700; color:#fff;">365 건강농산</span>
         </div>
         """, unsafe_allow_html=True)
         st.caption("주문서 변환 시스템 v3.0")
@@ -601,16 +609,6 @@ def main():
             label_visibility="collapsed",
         )
 
-        st.divider()
-        
-        # 등록 업체 수
-        st.markdown(f"""
-        <div class="sidebar-info">
-             <strong>등록 업체</strong>: {len(current_nh_list)}개
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.divider()
         st.caption("v3.0.0 | 2026-02-12")
 
     # ── 메인 콘텐츠 ──
