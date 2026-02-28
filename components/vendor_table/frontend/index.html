@@ -1,489 +1,547 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 14px;
-    color: #262730;
-    background: transparent;
-  }
+  <meta charset="utf-8" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* ── 테이블 ── */
-  .vendor-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .vendor-table thead th {
-    background: #f0f2f6;
-    padding: 10px 12px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 13px;
-    color: #555;
-    border-bottom: 2px solid #ddd;
-    white-space: nowrap;
-  }
-  .vendor-table tbody tr {
-    border-bottom: 1px solid #eee;
-    transition: background 0.15s;
-  }
-  .vendor-table tbody tr:hover { background: #f8f9fb; }
-  .vendor-table td {
-    padding: 8px 12px;
-    vertical-align: middle;
-  }
+    body {
+      font-family: "Source Sans Pro", sans-serif;
+      font-size: 14px;
+      color: #262730;
+      background: transparent;
+    }
 
-  /* ── 체크박스 ── */
-  .chk-cell { width: 40px; text-align: center; }
-  .chk-cell input[type="checkbox"] {
-    width: 18px; height: 18px; cursor: pointer;
-    accent-color: #ff4b4b;
-  }
+    /* ── 테이블 ── */
+    .vendor-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
 
-  /* ── 텍스트 입력 ── */
-  .text-input {
-    width: 100%;
-    padding: 6px 8px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: inherit;
-    background: transparent;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .text-input:hover { border-color: #ccc; background: #fafafa; }
-  .text-input:focus {
-    outline: none;
-    border-color: #ff4b4b;
-    background: #fff;
-    box-shadow: 0 0 0 2px rgba(255,75,75,0.15);
-  }
+    .vendor-table thead th {
+      background: #f0f2f6;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: #555;
+      border-bottom: 2px solid #ddd;
+      white-space: nowrap;
+    }
 
-  /* ── 드롭존 ── */
-  .drop-zone {
-    min-height: 42px;
-    border: 2px dashed #ccc;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    font-size: 13px;
-    color: #888;
-    position: relative;
-  }
-  .drop-zone:hover { border-color: #aaa; background: #fafafa; }
-  .drop-zone.drag-over {
-    border-color: #ff4b4b;
-    background: rgba(255,75,75,0.06);
-    color: #ff4b4b;
-  }
-  .drop-zone.has-file {
-    border-style: solid;
-    border-color: #4CAF50;
-    color: #333;
-    background: #f0faf0;
-  }
-  .drop-zone .file-name {
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 180px;
-  }
-  .drop-zone .clear-btn {
-    position: absolute;
-    right: 4px;
-    top: 4px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    color: #999;
-    padding: 2px 4px;
-    border-radius: 3px;
-  }
-  .drop-zone .clear-btn:hover { background: #eee; color: #e53935; }
-  .drop-zone input[type="file"] {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0; left: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
+    .vendor-table tbody tr {
+      border-bottom: 1px solid #eee;
+      transition: background 0.15s;
+    }
 
-  /* ── 행 추가 버튼 ── */
-  .add-row-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    padding: 10px;
-    margin-top: 6px;
-    border: 2px dashed #ccc;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    font-size: 14px;
-    color: #888;
-    transition: all 0.2s;
-  }
-  .add-row-btn:hover {
-    border-color: #ff4b4b;
-    color: #ff4b4b;
-    background: rgba(255,75,75,0.04);
-  }
+    .vendor-table tbody tr:hover {
+      background: #f8f9fb;
+    }
 
-  /* ── 삭제 버튼 ── */
-  .delete-btn {
-    display: none;
-    width: 100%;
-    padding: 10px;
-    margin-top: 8px;
-    border: none;
-    border-radius: 6px;
-    background: #ff4b4b;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .delete-btn:hover { background: #e53935; }
-  .delete-btn.visible { display: block; }
+    .vendor-table td {
+      padding: 8px 12px;
+      vertical-align: middle;
+    }
 
-  /* ── 상태 메시지 ── */
-  .status-msg {
-    padding: 6px 10px;
-    margin-top: 6px;
-    border-radius: 4px;
-    font-size: 13px;
-    display: none;
-  }
-  .status-msg.success {
-    display: block;
-    background: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
-  }
-</style>
+    /* ── 체크박스 ── */
+    .chk-cell {
+      width: 40px;
+      text-align: center;
+    }
+
+    .chk-cell input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #ff4b4b;
+    }
+
+    /* ── 텍스트 입력 ── */
+    .text-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      background: transparent;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .text-input:hover {
+      border-color: #ccc;
+      background: #fafafa;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: #ff4b4b;
+      background: #fff;
+      box-shadow: 0 0 0 2px rgba(255, 75, 75, 0.15);
+    }
+
+    /* ── 드롭존 ── */
+    .drop-zone {
+      min-height: 42px;
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      font-size: 13px;
+      color: #888;
+      position: relative;
+    }
+
+    .drop-zone:hover {
+      border-color: #aaa;
+      background: #fafafa;
+    }
+
+    .drop-zone.drag-over {
+      border-color: #ff4b4b;
+      background: rgba(255, 75, 75, 0.06);
+      color: #ff4b4b;
+    }
+
+    .drop-zone.has-file {
+      border-style: solid;
+      border-color: #4CAF50;
+      color: #333;
+      background: #f0faf0;
+    }
+
+    .drop-zone .file-name {
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 180px;
+    }
+
+    .drop-zone .clear-btn {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      color: #999;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    .drop-zone .clear-btn:hover {
+      background: #eee;
+      color: #e53935;
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* ── 행 추가 버튼 ── */
+    .add-row-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      color: #888;
+      transition: all 0.2s;
+    }
+
+    .add-row-btn:hover {
+      border-color: #ff4b4b;
+      color: #ff4b4b;
+      background: rgba(255, 75, 75, 0.04);
+    }
+
+    /* ── 삭제 버튼 ── */
+    .delete-btn {
+      display: none;
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 6px;
+      background: #ff4b4b;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .delete-btn:hover {
+      background: #e53935;
+    }
+
+    .delete-btn.visible {
+      display: block;
+    }
+
+    /* ── 상태 메시지 ── */
+    .status-msg {
+      padding: 6px 10px;
+      margin-top: 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .status-msg.success {
+      display: block;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+    }
+  </style>
 </head>
+
 <body>
-<div id="root">
-  <table class="vendor-table">
-    <thead>
-      <tr>
-        <th class="chk-cell">선택</th>
-        <th>업체명</th>
-        <th>분류키워드</th>
-        <th>양식 파일</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
-  <button class="add-row-btn" id="addRowBtn" onclick="addRow()">+ 새 업체 추가</button>
-  <button class="delete-btn" id="deleteBtn" onclick="deleteSelected()">🗑️ 선택한 업체 삭제</button>
-  <div class="status-msg" id="statusMsg"></div>
-</div>
+  <div id="root">
+    <table class="vendor-table">
+      <thead>
+        <tr>
+          <th class="chk-cell">선택</th>
+          <th>업체명</th>
+          <th>분류키워드</th>
+          <th>양식 파일</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <button class="add-row-btn" id="addRowBtn" onclick="addRow()">+ 새 업체 추가</button>
+    <button class="delete-btn" id="deleteBtn" onclick="deleteSelected()">🗑️ 선택한 업체 삭제</button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
 
-<script>
-// ── Streamlit 통신 ──
-function sendToStreamlit(type, data) {
-  window.parent.postMessage({ isStreamlitMessage: true, type: type, ...data }, "*");
-}
-
-function setComponentValue(value) {
-  sendToStreamlit("streamlit:setComponentValue", { value: value });
-}
-
-function setFrameHeight(height) {
-  sendToStreamlit("streamlit:setFrameHeight", { height: height });
-}
-
-// ── 상태 ──
-let vendors = [];
-let rows = [];       // 현재 테이블 행 데이터
-let initialized = false;
-let debounceTimer = null;
-
-// ── 렌더링 ──
-function renderTable() {
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = "";
-
-  rows.forEach((row, idx) => {
-    const tr = document.createElement("tr");
-
-    // 선택 체크박스
-    const tdChk = document.createElement("td");
-    tdChk.className = "chk-cell";
-    const chk = document.createElement("input");
-    chk.type = "checkbox";
-    chk.checked = row.selected || false;
-    chk.onchange = () => { row.selected = chk.checked; updateDeleteBtn(); };
-    tdChk.appendChild(chk);
-    tr.appendChild(tdChk);
-
-    // 업체명
-    const tdName = document.createElement("td");
-    const nameInput = document.createElement("input");
-    nameInput.type = "text";
-    nameInput.className = "text-input";
-    nameInput.value = row.name || "";
-    nameInput.placeholder = "업체명 입력";
-    nameInput.onchange = () => {
-      row.name = nameInput.value.trim();
-      debounceSendValue();
-    };
-    tdName.appendChild(nameInput);
-    tr.appendChild(tdName);
-
-    // 분류키워드
-    const tdKw = document.createElement("td");
-    const kwInput = document.createElement("input");
-    kwInput.type = "text";
-    kwInput.className = "text-input";
-    kwInput.value = row.keywords || "";
-    kwInput.placeholder = "쉼표로 구분된 키워드";
-    kwInput.onchange = () => {
-      row.keywords = kwInput.value.trim();
-      debounceSendValue();
-    };
-    tdKw.appendChild(kwInput);
-    tr.appendChild(tdKw);
-
-    // 양식 파일 드롭존
-    const tdFile = document.createElement("td");
-    const dropZone = createDropZone(row, idx);
-    tdFile.appendChild(dropZone);
-    tr.appendChild(tdFile);
-
-    tbody.appendChild(tr);
-  });
-
-  updateDeleteBtn();
-  requestAnimationFrame(() => {
-    setFrameHeight(document.getElementById("root").scrollHeight + 20);
-  });
-}
-
-function createDropZone(row, idx) {
-  const zone = document.createElement("div");
-  zone.className = "drop-zone" + (row.form_file ? " has-file" : "");
-
-  if (row.form_file) {
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "file-name";
-    nameSpan.textContent = "📄 " + row.form_file;
-    nameSpan.title = row.form_file;
-    zone.appendChild(nameSpan);
-
-    const clearBtn = document.createElement("button");
-    clearBtn.className = "clear-btn";
-    clearBtn.textContent = "✕";
-    clearBtn.title = "파일 제거";
-    clearBtn.onclick = (e) => {
-      e.stopPropagation();
-      row.form_file = "";
-      row._file_removed = true;
-      renderTable();
-      debounceSendValue();
-    };
-    zone.appendChild(clearBtn);
-  } else {
-    zone.textContent = "📂 파일을 드래그하거나 클릭";
-  }
-
-  // 숨겨진 파일 입력
-  const fileInput = document.createElement("input");
-  fileInput.type = "file";
-  fileInput.accept = ".xlsx,.xls";
-  fileInput.onchange = (e) => {
-    if (e.target.files.length > 0) {
-      handleFile(e.target.files[0], idx);
+  <script>
+    // ── Streamlit 통신 ──
+    function sendToStreamlit(type, data) {
+      window.parent.postMessage({ isStreamlitMessage: true, type: type, ...data }, "*");
     }
-  };
-  zone.appendChild(fileInput);
 
-  // 드래그앤드롭 이벤트
-  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("drag-over"); };
-  zone.ondragleave = () => { zone.classList.remove("drag-over"); };
-  zone.ondrop = (e) => {
-    e.preventDefault();
-    zone.classList.remove("drag-over");
-    if (e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0], idx);
+    function setComponentValue(value) {
+      sendToStreamlit("streamlit:setComponentValue", { value: value });
     }
-  };
 
-  return zone;
-}
+    function setFrameHeight(height) {
+      sendToStreamlit("streamlit:setFrameHeight", { height: height });
+    }
 
-function handleFile(file, rowIndex) {
-  // 확장자 검증
-  const ext = file.name.split(".").pop().toLowerCase();
-  if (!["xlsx", "xls"].includes(ext)) {
-    showStatus("⚠️ .xlsx 또는 .xls 파일만 업로드 가능합니다.", false);
-    return;
-  }
+    // ── 상태 ──
+    let vendors = [];
+    let rows = [];       // 현재 테이블 행 데이터
+    let initialized = false;
+    let debounceTimer = null;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const base64 = reader.result.split(",")[1]; // data:... 헤더 제거
-    rows[rowIndex].form_file = file.name;
-    rows[rowIndex]._file_data = base64;
-    rows[rowIndex]._file_name = file.name;
-    renderTable();
-    // 파일 업로드는 즉시 전송 (디바운스 없음)
-    sendValue();
-  };
-  reader.readAsDataURL(file);
-}
+    // ── 렌더링 ──
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
 
-// ── 행 추가/삭제 ──
-function addRow() {
-  rows.push({
-    id: null,
-    name: "",
-    keywords: "",
-    form_file: "",
-    selected: false,
-    _is_new: true,
-  });
-  renderTable();
-}
+      rows.forEach((row, idx) => {
+        const tr = document.createElement("tr");
 
-function deleteSelected() {
-  const toDelete = rows.filter(r => r.selected);
-  if (toDelete.length === 0) return;
+        // 선택 체크박스
+        const tdChk = document.createElement("td");
+        tdChk.className = "chk-cell";
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.checked = row.selected || false;
+        chk.onchange = () => { row.selected = chk.checked; updateDeleteBtn(); };
+        tdChk.appendChild(chk);
+        tr.appendChild(tdChk);
 
-  // 삭제 정보를 포함하여 전송
-  const deleteIds = toDelete.filter(r => r.id !== null).map(r => r.id);
-  rows = rows.filter(r => !r.selected);
-  renderTable();
+        // 업체명
+        const tdName = document.createElement("td");
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.className = "text-input";
+        nameInput.value = row.name || "";
+        nameInput.placeholder = "업체명 입력";
+        nameInput.onchange = () => {
+          row.name = nameInput.value.trim();
+          debounceSendValue();
+        };
+        tdName.appendChild(nameInput);
+        tr.appendChild(tdName);
 
-  // 삭제 정보를 값에 포함
-  const value = buildValue();
-  value.deleted_ids = deleteIds;
-  setComponentValue(value);
-}
+        // 분류키워드
+        const tdKw = document.createElement("td");
+        const kwInput = document.createElement("input");
+        kwInput.type = "text";
+        kwInput.className = "text-input";
+        kwInput.value = row.keywords || "";
+        kwInput.placeholder = "쉼표로 구분된 키워드";
+        kwInput.onchange = () => {
+          row.keywords = kwInput.value.trim();
+          debounceSendValue();
+        };
+        tdKw.appendChild(kwInput);
+        tr.appendChild(tdKw);
 
-function updateDeleteBtn() {
-  const btn = document.getElementById("deleteBtn");
-  const count = rows.filter(r => r.selected).length;
-  if (count > 0) {
-    btn.className = "delete-btn visible";
-    btn.textContent = "🗑️ 선택한 " + count + "개 업체 삭제";
-  } else {
-    btn.className = "delete-btn";
-  }
-}
+        // 양식 파일 드롭존
+        const tdFile = document.createElement("td");
+        const dropZone = createDropZone(row, idx);
+        tdFile.appendChild(dropZone);
+        tr.appendChild(tdFile);
 
-// ── 값 전송 ──
-function buildValue() {
-  const result = {
-    rows: rows.map(r => ({
-      id: r.id,
-      name: r.name,
-      keywords: r.keywords,
-      form_file: r.form_file,
-      _is_new: r._is_new || false,
-      _file_data: r._file_data || null,
-      _file_name: r._file_name || null,
-      _file_removed: r._file_removed || false,
-    })),
-    deleted_ids: [],
-  };
-  return result;
-}
+        tbody.appendChild(tr);
+      });
 
-function sendValue() {
-  setComponentValue(buildValue());
-}
+      updateDeleteBtn();
+      requestAnimationFrame(() => {
+        setFrameHeight(document.getElementById("root").scrollHeight + 20);
+      });
+    }
 
-function debounceSendValue() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => { sendValue(); }, 600);
-}
+    function createDropZone(row, idx) {
+      const zone = document.createElement("div");
+      zone.className = "drop-zone" + (row.form_file ? " has-file" : "");
 
-function showStatus(msg, isSuccess) {
-  const el = document.getElementById("statusMsg");
-  el.textContent = msg;
-  el.className = "status-msg" + (isSuccess ? " success" : "");
-  el.style.display = "block";
-  setTimeout(() => { el.style.display = "none"; }, 3000);
-}
+      if (row.form_file) {
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "file-name";
+        nameSpan.textContent = "📄 " + row.form_file;
+        nameSpan.title = row.form_file;
+        zone.appendChild(nameSpan);
 
-// ── Streamlit 이벤트 핸들러 ──
-function onRender(event) {
-  if (!event.detail) return;
-  const args = event.detail.args;
-
-  if (!initialized && args.vendors) {
-    vendors = args.vendors;
-    rows = vendors.map(v => ({
-      id: v.id,
-      name: v.name,
-      keywords: v.keywords,
-      form_file: v.form_file || "",
-      selected: false,
-      _is_new: false,
-    }));
-    initialized = true;
-    renderTable();
-  } else if (args.vendors) {
-    // 업데이트: 기존 행의 데이터를 갱신하되 편집 중인 상태는 유지
-    const newVendors = args.vendors;
-    const currentIds = new Set(rows.filter(r => r.id !== null).map(r => r.id));
-    const newIds = new Set(newVendors.map(v => v.id));
-
-    // 신규 업체 감지 (Python에서 추가된 경우)
-    newVendors.forEach(v => {
-      if (!currentIds.has(v.id)) {
-        rows.push({
-          id: v.id, name: v.name, keywords: v.keywords,
-          form_file: v.form_file || "", selected: false, _is_new: false,
-        });
+        const clearBtn = document.createElement("button");
+        clearBtn.className = "clear-btn";
+        clearBtn.textContent = "✕";
+        clearBtn.title = "파일 제거";
+        clearBtn.onclick = (e) => {
+          e.stopPropagation();
+          row.form_file = "";
+          row._file_removed = true;
+          renderTable();
+          debounceSendValue();
+        };
+        zone.appendChild(clearBtn);
+      } else {
+        zone.textContent = "📂 파일을 드래그하거나 클릭";
       }
-    });
 
-    // 삭제된 업체 제거
-    rows = rows.filter(r => r.id === null || newIds.has(r.id));
-
-    // 기존 행의 form_file 갱신 (파일 업로드 후 Python에서 업데이트된 경우)
-    rows.forEach(r => {
-      if (r.id !== null) {
-        const nv = newVendors.find(v => v.id === r.id);
-        if (nv && !r._file_data) {
-          r.form_file = nv.form_file || "";
+      // 숨겨진 파일 입력
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = ".xlsx,.xls";
+      fileInput.onchange = (e) => {
+        if (e.target.files.length > 0) {
+          handleFile(e.target.files[0], idx);
         }
+      };
+      zone.appendChild(fileInput);
+
+      // 드래그앤드롭 이벤트
+      zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("drag-over"); };
+      zone.ondragleave = () => { zone.classList.remove("drag-over"); };
+      zone.ondrop = (e) => {
+        e.preventDefault();
+        zone.classList.remove("drag-over");
+        if (e.dataTransfer.files.length > 0) {
+          handleFile(e.dataTransfer.files[0], idx);
+        }
+      };
+
+      return zone;
+    }
+
+    function handleFile(file, rowIndex) {
+      // 확장자 검증
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!["xlsx", "xls"].includes(ext)) {
+        showStatus("⚠️ .xlsx 또는 .xls 파일만 업로드 가능합니다.", false);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(",")[1]; // data:... 헤더 제거
+        rows[rowIndex].form_file = file.name;
+        rows[rowIndex]._file_data = base64;
+        rows[rowIndex]._file_name = file.name;
+        renderTable();
+        // 파일 업로드는 즉시 전송 (디바운스 없음)
+        sendValue();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── 행 추가/삭제 ──
+    function addRow() {
+      rows.push({
+        id: null,
+        name: "",
+        keywords: "",
+        form_file: "",
+        selected: false,
+        _is_new: true,
+      });
+      renderTable();
+    }
+
+    function deleteSelected() {
+      const toDelete = rows.filter(r => r.selected);
+      if (toDelete.length === 0) return;
+
+      // 삭제 정보를 포함하여 전송
+      const deleteIds = toDelete.filter(r => r.id !== null).map(r => r.id);
+      rows = rows.filter(r => !r.selected);
+      renderTable();
+
+      // 삭제 정보를 값에 포함
+      const value = buildValue();
+      value.deleted_ids = deleteIds;
+      setComponentValue(value);
+    }
+
+    function updateDeleteBtn() {
+      const btn = document.getElementById("deleteBtn");
+      const count = rows.filter(r => r.selected).length;
+      if (count > 0) {
+        btn.className = "delete-btn visible";
+        btn.textContent = "🗑️ 선택한 " + count + "개 업체 삭제";
+      } else {
+        btn.className = "delete-btn";
+      }
+      // 삭제 버튼 표시/숨김 후 iframe 높이 재계산
+      requestAnimationFrame(() => {
+        setFrameHeight(document.getElementById("root").scrollHeight + 20);
+      });
+    }
+
+    // ── 값 전송 ──
+    function buildValue() {
+      const result = {
+        rows: rows
+          .filter(r => {
+            // 새 행은 업체명과 분류키워드 모두 입력된 경우만 전송
+            if (r._is_new && (!r.name || !r.name.trim())) return false;
+            if (r._is_new && (!r.keywords || !r.keywords.trim())) return false;
+            return true;
+          })
+          .map(r => ({
+            id: r.id,
+            name: r.name,
+            keywords: r.keywords,
+            form_file: r.form_file,
+            _is_new: r._is_new || false,
+            _file_data: r._file_data || null,
+            _file_name: r._file_name || null,
+            _file_removed: r._file_removed || false,
+          })),
+        deleted_ids: [],
+      };
+      return result;
+    }
+
+    function sendValue() {
+      setComponentValue(buildValue());
+    }
+
+    function debounceSendValue() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { sendValue(); }, 600);
+    }
+
+    function showStatus(msg, isSuccess) {
+      const el = document.getElementById("statusMsg");
+      el.textContent = msg;
+      el.className = "status-msg" + (isSuccess ? " success" : "");
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    // ── Streamlit 이벤트 핸들러 ──
+    function onRender(event) {
+      if (!event.detail) return;
+      const args = event.detail.args;
+
+      if (!initialized && args.vendors) {
+        vendors = args.vendors;
+        rows = vendors.map(v => ({
+          id: v.id,
+          name: v.name,
+          keywords: v.keywords,
+          form_file: v.form_file || "",
+          selected: false,
+          _is_new: false,
+        }));
+        initialized = true;
+        renderTable();
+      } else if (args.vendors) {
+        // 업데이트: 기존 행의 데이터를 갱신하되 편집 중인 상태는 유지
+        const newVendors = args.vendors;
+        const currentIds = new Set(rows.filter(r => r.id !== null).map(r => r.id));
+        const newIds = new Set(newVendors.map(v => v.id));
+
+        // 신규 업체 감지 (Python에서 추가된 경우)
+        newVendors.forEach(v => {
+          if (!currentIds.has(v.id)) {
+            rows.push({
+              id: v.id, name: v.name, keywords: v.keywords,
+              form_file: v.form_file || "", selected: false, _is_new: false,
+            });
+          }
+        });
+
+        // 삭제된 업체 제거
+        rows = rows.filter(r => r.id === null || newIds.has(r.id));
+
+        // 기존 행의 form_file 갱신 (파일 업로드 후 Python에서 업데이트된 경우)
+        rows.forEach(r => {
+          if (r.id !== null) {
+            const nv = newVendors.find(v => v.id === r.id);
+            if (nv && !r._file_data) {
+              r.form_file = nv.form_file || "";
+            }
+          }
+        });
+
+        renderTable();
+      }
+    }
+
+    // Streamlit 컴포넌트 이벤트 리스닝
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "streamlit:render") {
+        onRender({ detail: { args: event.data.args } });
       }
     });
 
-    renderTable();
-  }
-}
-
-// Streamlit 컴포넌트 이벤트 리스닝
-window.addEventListener("message", (event) => {
-  if (event.data.type === "streamlit:render") {
-    onRender({ detail: { args: event.data.args } });
-  }
-});
-
-// 컴포넌트 준비 완료 신호
-sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
-setFrameHeight(200);
-</script>
+    // 컴포넌트 준비 완료 신호
+    sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+    setFrameHeight(200);
+  </script>
 </body>
+
 </html>
