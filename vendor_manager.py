@@ -94,6 +94,17 @@ def render_vendor_tab():
 
     # ── 다운로드 버튼 (테이블 위에 표시) ──
     if "_vendor_dl_file" in st.session_state:
+        st.markdown("""<style>
+        button[data-testid="stDownloadButton"] {
+            background-color: #1a73e8 !important;
+            border-color: #1a73e8 !important;
+            color: white !important;
+        }
+        button[data-testid="stDownloadButton"]:hover {
+            background-color: #1557b0 !important;
+            border-color: #1557b0 !important;
+        }
+        </style>""", unsafe_allow_html=True)
         dl_file = st.session_state["_vendor_dl_file"]
         filepath = _get_form_file_path(dl_file)
         if filepath:
