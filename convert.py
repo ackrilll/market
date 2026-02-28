@@ -807,8 +807,26 @@ def main():
                 if (old) old.remove();
                 var img = document.createElement('img');
                 img.src = dataUrl;
+                img.onload = function() {
+                    // Canvas로 모서리 픽셀 색상 추출
+                    var c = document.createElement('canvas');
+                    c.width = img.naturalWidth; c.height = img.naturalHeight;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    var corners = [
+                        ctx.getImageData(0, 0, 1, 1).data,
+                        ctx.getImageData(img.naturalWidth-1, 0, 1, 1).data,
+                        ctx.getImageData(0, img.naturalHeight-1, 1, 1).data,
+                        ctx.getImageData(img.naturalWidth-1, img.naturalHeight-1, 1, 1).data
+                    ];
+                    // 네 모서리 평균색
+                    var r=0,g=0,b=0;
+                    corners.forEach(function(p){r+=p[0];g+=p[1];b+=p[2];});
+                    r=Math.round(r/4); g=Math.round(g/4); b=Math.round(b/4);
+                    avatar.style.background = 'rgb('+r+','+g+','+b+')';
+                    localStorage.setItem('profile_avatar_bg', 'rgb('+r+','+g+','+b+')');
+                };
                 defaultIcon.style.display = 'none';
-                avatar.style.background = '#fff';
                 avatar.insertBefore(img, avatar.firstChild);
             }
             function handleFile(file) {
@@ -820,7 +838,11 @@ def main():
             }
             // 저장된 이미지 복원
             var saved = localStorage.getItem('profile_avatar');
-            if (saved) setAvatar(saved);
+            if (saved) {
+                setAvatar(saved);
+                var savedBg = localStorage.getItem('profile_avatar_bg');
+                if (savedBg) avatar.style.background = savedBg;
+            }
             // 클릭 → 파일 선택
             avatar.addEventListener('click', function() { fileInput.value = ''; fileInput.click(); });
             fileInput.addEventListener('change', function(e) {
