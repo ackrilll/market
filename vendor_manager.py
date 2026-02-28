@@ -99,12 +99,14 @@ def render_vendor_tab():
     if result is not None:
         changes_applied = False
 
-        # 1) 삭제 처리
+        # 1) 삭제 처리 (이미 삭제된 ID는 무시)
         deleted_ids = result.get("deleted_ids", [])
         for vid in deleted_ids:
             try:
                 remove_vendor_from_config(vid)
                 changes_applied = True
+            except ValueError:
+                pass  # 이미 삭제된 ID — 무시
             except Exception as e:
                 st.error(f"⚠️ 삭제 실패: {e}")
 
