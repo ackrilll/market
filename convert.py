@@ -123,23 +123,42 @@ def inject_custom_css():
 
     /* ── 상단 헤더 바 ── */
     .top-header-bar {
-        background: #2b2f3a;
-        padding: 10px 24px;
-        margin: -80px -80px 20px -80px;
+        background: #1e2128;
+        padding: 0 24px;
+        height: 42px;
+        margin: -80px -80px 0 -80px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 999999;
     }
     .top-header-title {
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 700;
         color: #fff;
         letter-spacing: -0.3px;
     }
     .top-header-user {
-        font-size: 13px;
-        color: #ccc;
-        letter-spacing: -0.2px;
+        font-size: 12px;
+        color: #aaa;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .top-header-user a {
+        color: #aaa !important;
+        text-decoration: none;
+    }
+    .top-header-user a:hover {
+        color: #fff !important;
+    }
+    /* 메인 콘텐츠 상단 여백 (헤더 높이만큼) */
+    .stMainBlockContainer {
+        padding-top: 60px !important;
     }
 
     /* Streamlit 기본 헤더 숨김 */
@@ -149,10 +168,12 @@ def inject_custom_css():
 
     /* ── 사이드바 스타일 ── */
     section[data-testid="stSidebar"] {
-        background: #2b2f3a;
-        border-right: 1px solid #3a3e4a;
+        background: #353a47;
+        border-right: 1px solid #444;
+        top: 42px !important;
+        height: calc(100vh - 42px) !important;
     }
-    /* 사이드바 접기 버튼만 숨기고, 항상 펼쳐진 상태 유지 */
+    /* 사이드바 접기 버튼 숨김 */
     button[data-testid="stSidebarCollapseButton"] {
         display: none !important;
     }
@@ -168,6 +189,40 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] > div {
         width: 240px !important;
+        padding-top: 8px !important;
+    }
+    /* 사이드바 프로필 영역 */
+    .sidebar-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+    }
+    .sidebar-profile-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #03C75A;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .sidebar-profile-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .sidebar-profile-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+    }
+    .sidebar-profile-role {
+        font-size: 11px;
+        color: #8a919a;
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
@@ -618,16 +673,25 @@ def main():
     st.markdown("""
     <div class="top-header-bar">
         <span class="top-header-title">주문서 변환 시스템</span>
-        <span class="top-header-user">365건강농산 님 | <a href="#" style="color:#ccc; text-decoration:none;">로그아웃</a></span>
+        <span class="top-header-user">
+            365건강농산 님
+            <span style="color:#555; margin:0 4px;">|</span>
+            <a href="#">로그아웃</a>
+        </span>
     </div>
     """, unsafe_allow_html=True)
     
     # ── 사이드바: 네비게이션 ──
     current_nh_list = get_nh_list()
     with st.sidebar:
+        # 프로필 영역 (eldymarket 스타일)
         st.markdown("""
-        <div style="padding:16px 0 8px 0;">
-            <span style="font-size:20px; font-weight:700; color:#fff;">주문서 변환 시스템</span>
+        <div class="sidebar-profile">
+            <div class="sidebar-profile-avatar">365</div>
+            <div class="sidebar-profile-info">
+                <span class="sidebar-profile-name">365건강농산</span>
+                <span class="sidebar-profile-role">주문서 관리자</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         st.divider()
