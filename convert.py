@@ -271,14 +271,18 @@ def inject_custom_css():
         font-weight: 600 !important;
         border-left: 3px solid #03C75A;
     }
-    /* 사이드바 접기/열기 버튼 완전 숨김 */
+    /* 사이드바 접기/열기 버튼 완전 숨김 (hover 포함) */
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="stSidebarNavCollapseButton"],
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"],
     .stSidebarCollapse,
     section[data-testid="stSidebar"] > button,
-    section[data-testid="stSidebar"] > div > button:first-child {
+    section[data-testid="stSidebar"] > div > button:first-child,
+    section[data-testid="stSidebar"]:hover button[data-testid="stSidebarCollapseButton"],
+    section[data-testid="stSidebar"] button[kind="header"],
+    section[data-testid="stSidebar"] button[aria-label*="Close"],
+    section[data-testid="stSidebar"] button[aria-label*="sidebar"] {
         display: none !important;
         visibility: hidden !important;
         width: 0 !important;
@@ -286,6 +290,7 @@ def inject_custom_css():
         overflow: hidden !important;
         position: absolute !important;
         pointer-events: none !important;
+        opacity: 0 !important;
     }
     /* 라디오 버튼 원형 숨김 */
     section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
