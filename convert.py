@@ -146,6 +146,15 @@ def inject_custom_css():
         background: #2b2f3a;
         border-right: 1px solid #3a3e4a;
     }
+    /* 사이드바 접기 버튼 숨기고 고정 */
+    button[data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    section[data-testid="stSidebar"] {
+        width: 240px !important;
+        min-width: 240px !important;
+    }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
     }
