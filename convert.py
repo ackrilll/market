@@ -121,20 +121,20 @@ def inject_custom_css():
         font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* ── 상단 헤더 바 ── */
+    /* ── 상단 헤더 바 (CSS로 고정) ── */
     .top-header-bar {
-        background: #1e2128;
-        padding: 0 24px;
-        height: 42px;
-        margin: -80px -80px 0 -80px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
+        height: 42px;
+        background: #1e2128;
         z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        box-sizing: border-box;
     }
     .top-header-title {
         font-size: 15px;
@@ -156,7 +156,7 @@ def inject_custom_css():
     .top-header-user a:hover {
         color: #fff !important;
     }
-    /* 메인 콘텐츠 상단 여백 (헤더 높이만큼) */
+    /* 메인 콘텐츠 상단 여백 */
     .stMainBlockContainer {
         padding-top: 60px !important;
     }
@@ -669,17 +669,24 @@ def main():
     
     inject_custom_css()
 
-    # ── 상단 헤더 바 (네이버 스마트스토어센터 스타일) ──
-    st.markdown("""
-    <div class="top-header-bar">
-        <span class="top-header-title">주문서 변환 시스템</span>
-        <span class="top-header-user">
-            365건강농산 님
-            <span style="color:#555; margin:0 4px;">|</span>
-            <a href="#">로그아웃</a>
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── 상단 헤더 바 (components.html로 렌더링 - iframe 바깥으로 헤더 생성) ──
+    import streamlit.components.v1 as header_comp
+    header_comp.html("""
+    <script>
+        // 부모 페이지에 헤더 바 삽입
+        (function() {
+            var parent = window.parent.document;
+            if (!parent.getElementById('custom-top-header')) {
+                var header = parent.createElement('div');
+                header.id = 'custom-top-header';
+                header.className = 'top-header-bar';
+                header.innerHTML = '<span class="top-header-title">주문서 변환 시스템</span>' +
+                    '<span class="top-header-user">365건강농산 님 <span style="color:#555; margin:0 4px;">|</span> <a href="#" style="color:#aaa; text-decoration:none;">로그아웃</a></span>';
+                parent.body.appendChild(header);
+            }
+        })();
+    </script>
+    """, height=0)
     
     # ── 사이드바: 네비게이션 ──
     current_nh_list = get_nh_list()
