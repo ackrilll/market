@@ -196,28 +196,28 @@ def inject_custom_css():
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 24px 16px 16px 16px;
+        padding: 32px 16px 20px 16px;
     }
     .sidebar-profile-avatar {
-        width: 64px;
-        height: 64px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background: #4a4f5c;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 10px;
+        margin-bottom: 14px;
     }
     .sidebar-profile-avatar svg {
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
         fill: #8a919a;
     }
     .sidebar-profile-name {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 600;
         color: #fff;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     .sidebar-profile-role {
         font-size: 12px;
@@ -229,10 +229,10 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 12px 18px !important;
+        padding: 14px 20px !important;
         margin: 0 !important;
         border-radius: 0 !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
         font-weight: 500 !important;
         color: #d8dee4 !important;
         cursor: pointer;
@@ -240,12 +240,12 @@ def inject_custom_css():
         border-left: 3px solid transparent;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
-        background: #363b48 !important;
+        background: #3e4452 !important;
         color: #fff !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
     section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
-        background: #363b48 !important;
+        background: #3e4452 !important;
         color: #fff !important;
         font-weight: 600 !important;
         border-left: 3px solid #03C75A;
