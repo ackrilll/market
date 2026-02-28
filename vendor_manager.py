@@ -92,6 +92,32 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
+    # ── 다운로드 버튼 (테이블 위에 표시) ──
+    if "_vendor_dl_file" in st.session_state:
+        dl_file = st.session_state["_vendor_dl_file"]
+        filepath = _get_form_file_path(dl_file)
+        if filepath:
+            with open(filepath, "rb") as f:
+                file_bytes = f.read()
+            ext = os.path.splitext(dl_file)[1].lower()
+            mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    if ext == ".xlsx"
+                    else "application/vnd.ms-excel")
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.download_button(
+                    label=f"{dl_file} 다운로드",
+                    data=file_bytes,
+                    file_name=dl_file,
+                    mime=mime,
+                    key="dl_form_active",
+                    type="primary",
+                )
+            with col2:
+                if st.button("닫기", key="dl_close"):
+                    del st.session_state["_vendor_dl_file"]
+                    st.rerun()
+
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
 
@@ -102,22 +128,9 @@ def render_vendor_tab():
         if dl_req:
             form_file = dl_req.get("form_file", "")
             if form_file:
-                filepath = _get_form_file_path(form_file)
-                if filepath:
-                    with open(filepath, "rb") as f:
-                        file_bytes = f.read()
-                    ext = os.path.splitext(form_file)[1].lower()
-                    mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            if ext == ".xlsx"
-                            else "application/vnd.ms-excel")
-                    st.download_button(
-                        label=f"{form_file} 다운로드",
-                        data=file_bytes,
-                        file_name=form_file,
-                        mime=mime,
-                        key="dl_form_request",
-                    )
-            return  # 다운로드 요청 시 rows 처리 건너뛰기
+                st.session_state["_vendor_dl_file"] = form_file
+                st.rerun()
+            return
 
         changes_applied = False
 
