@@ -46,9 +46,36 @@
       background: #f8f9fb;
     }
 
+    .vendor-table tbody tr.dragging {
+      opacity: 0.4;
+      background: #e3f2fd;
+    }
+
+    .vendor-table tbody tr.drag-over {
+      border-top: 3px solid #2196F3;
+    }
+
     .vendor-table td {
       padding: 8px 12px;
       vertical-align: middle;
+    }
+
+    /* ── 드래그 핸들 ── */
+    .drag-handle {
+      cursor: grab;
+      color: #bbb;
+      font-size: 18px;
+      user-select: none;
+      text-align: center;
+      width: 32px;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .drag-handle:hover {
+      color: #666;
     }
 
     /* ── 체크박스 ── */
@@ -241,6 +268,7 @@
     <table class="vendor-table">
       <thead>
         <tr>
+          <th class="drag-handle" style="font-size:14px;">순서</th>
           <th class="chk-cell">선택</th>
           <th>업체명</th>
           <th>분류키워드</th>
@@ -272,6 +300,7 @@
     let rows = [];       // 현재 테이블 행 데이터
     let initialized = false;
     let debounceTimer = null;
+    let dragSrcIdx = null; // 드래그 시작 행 인덱스
 
     // ── 렌더링 ──
     function renderTable() {
@@ -280,6 +309,43 @@
 
       rows.forEach((row, idx) => {
         const tr = document.createElement("tr");
+        tr.draggable = true;
+        tr.dataset.idx = idx;
+
+        // 드래그 이벤트
+        tr.ondragstart = (e) => {
+          dragSrcIdx = idx;
+          tr.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        };
+        tr.ondragend = () => {
+          tr.classList.remove('dragging');
+          document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        };
+        tr.ondragover = (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          tr.classList.add('drag-over');
+        };
+        tr.ondragleave = () => { tr.classList.remove('drag-over'); };
+        tr.ondrop = (e) => {
+          e.preventDefault();
+          tr.classList.remove('drag-over');
+          const targetIdx = idx;
+          if (dragSrcIdx !== targetIdx) {
+            const moved = rows.splice(dragSrcIdx, 1)[0];
+            rows.splice(targetIdx, 0, moved);
+            renderTable();
+            debounceSendValue();
+          }
+        };
+
+        // 드래그 핸들
+        const tdDrag = document.createElement("td");
+        tdDrag.className = "drag-handle";
+        tdDrag.innerHTML = "☰";
+        tdDrag.title = "드래그하여 순서 변경";
+        tr.appendChild(tdDrag);
 
         // 선택 체크박스
         const tdChk = document.createElement("td");
