@@ -110,17 +110,81 @@ def create_sort_info_file(raw_df):
 # ──────────────────────────────────── 커스텀 스타일 ────────────────────────────────────
 
 def inject_custom_css():
-    """Streamlit 앱에 커스텀 CSS를 주입합니다."""
+    """Streamlit 앱에 네이버 스마트스토어센터 스타일 CSS를 주입합니다."""
     st.markdown("""
     <style>
-    /* 메인 헤더 스타일 */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+    /* ── 전역 폰트 ── */
+    html, body, [class*="css"], .stMarkdown, .stRadio label,
+    .stButton button, .stCaption, input, textarea, select {
+        font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+
+    /* ── 상단 헤더 바 ── */
+    .top-header-bar {
+        background: #03C75A;
+        padding: 10px 24px;
+        margin: -80px -80px 20px -80px;
+        display: flex;
+        align-items: center;
+    }
+    .top-header-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.3px;
+    }
+
+    /* Streamlit 기본 헤더 숨김 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* ── 사이드바 스타일 ── */
+    section[data-testid="stSidebar"] {
+        background: #fff;
+        border-right: 1px solid #e8e8e8;
+    }
+    section[data-testid="stSidebar"] .stRadio > div {
+        gap: 0 !important;
+    }
+    section[data-testid="stSidebar"] .stRadio > div > label {
+        display: flex !important;
+        align-items: center;
+        padding: 10px 16px !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #333 !important;
+        cursor: pointer;
+        transition: background 0.15s;
+        border-left: 3px solid transparent;
+    }
+    section[data-testid="stSidebar"] .stRadio > div > label:hover {
+        background: #f5f5f5 !important;
+    }
+    section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
+    section[data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {
+        background: #e8f5e9 !important;
+        color: #03C75A !important;
+        font-weight: 600 !important;
+        border-left: 3px solid #03C75A;
+    }
+    /* 라디오 버튼 원형 숨김 */
+    section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
+        display: none !important;
+    }
+
+    /* ── 메인 헤더 (기존 카드 타입) ── */
     .main-header {
-        background: linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%);
+        background: linear-gradient(135deg, #03C75A 0%, #2DB400 100%);
         padding: 1.5rem 2rem;
         border-radius: 12px;
         color: white;
         margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+        box-shadow: 0 4px 15px rgba(3, 199, 90, 0.3);
     }
     .main-header h1 {
         margin: 0;
@@ -135,26 +199,27 @@ def inject_custom_css():
     
     /* 파일 정보 카드 */
     .file-info-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        border-radius: 10px;
+        background: #f9fafb;
+        border-radius: 8px;
         padding: 1.2rem 1.5rem;
         margin-bottom: 1rem;
-        border-left: 4px solid #2E7D32;
+        border-left: 4px solid #03C75A;
+        border: 1px solid #e8e8e8;
     }
 
     /* 결과 메트릭 카드 */
     .metric-card {
         background: white;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 1rem 1.2rem;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-top: 3px solid #2E7D32;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        border-top: 3px solid #03C75A;
     }
     .metric-card .metric-value {
         font-size: 2rem;
         font-weight: 700;
-        color: #2E7D32;
+        color: #03C75A;
         line-height: 1.2;
     }
     .metric-card .metric-label {
@@ -180,11 +245,23 @@ def inject_custom_css():
     
     /* 사이드바 정보 */
     .sidebar-info {
-        background: rgba(46, 125, 50, 0.08);
+        background: rgba(3, 199, 90, 0.08);
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 0.5rem;
         font-size: 0.85rem;
+    }
+
+    /* ── Streamlit 기본 버튼 색상 오버라이드 ── */
+    .stButton > button[kind="primary"],
+    button[data-testid="stBaseButton-primary"] {
+        background-color: #03C75A !important;
+        border-color: #03C75A !important;
+    }
+    .stButton > button[kind="primary"]:hover,
+    button[data-testid="stBaseButton-primary"]:hover {
+        background-color: #02b350 !important;
+        border-color: #02b350 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -491,57 +568,59 @@ def render_convert_tab():
 
 def main():
     st.set_page_config(
-        page_title="365 건강농산 주문서 변환기",
+        page_title="365 건강농산 주문서 변환 시스템",
         page_icon="",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
     inject_custom_css()
+
+    # ── 상단 헤더 바 (네이버 스마트스토어센터 스타일) ──
+    st.markdown("""
+    <div class="top-header-bar">
+        <span class="top-header-title">365건강농산 주문서 변환 시스템</span>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # ── 사이드바: 시스템 정보 ──
+    # ── 사이드바: 네비게이션 ──
     current_nh_list = get_nh_list()
     with st.sidebar:
-        st.markdown("###  365 건강농산")
-        st.markdown("주문서 변환 시스템")
+        st.markdown("""
+        <div style="padding:16px 0 8px 0;">
+            <span style="font-size:22px; font-weight:700; color:#222;">365 건강농산</span>
+        </div>
+        """, unsafe_allow_html=True)
+        st.caption("주문서 변환 시스템 v3.0")
+        st.divider()
+
+        # 네비게이션 메뉴
+        menu = st.radio(
+            "메뉴",
+            ["주문서 변환", "업체 관리", "주문 변환 매핑", "변환 미리보기"],
+            label_visibility="collapsed",
+        )
+
         st.divider()
         
         # 등록 업체 수
         st.markdown(f"""
         <div class="sidebar-info">
-             <strong>등록 업체</strong>: {len(current_nh_list)}개<br>
+             <strong>등록 업체</strong>: {len(current_nh_list)}개
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.caption("버전 3.0.0 · 2026-02-12")
-    
-    # ── 메인 헤더 ──
-    st.markdown("""
-    <div class="main-header">
-        <h1> 365 건강농산 주문서 변환기</h1>
-        <p>사방넷 통합 주문내역을 업체별 양식으로 자동 변환합니다</p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.caption("v3.0.0 | 2026-02-12")
 
-    # ── 탭 구조 ──
-    tab1, tab2, tab3, tab4 = st.tabs([
-        " 주문서 변환",
-        " 업체 관리",
-        " 주문 변환 매핑",
-        " 변환 미리보기",
-    ])
-
-    with tab1:
+    # ── 메인 콘텐츠 ──
+    if menu == "주문서 변환":
         render_convert_tab()
-    
-    with tab2:
+    elif menu == "업체 관리":
         render_vendor_tab()
-    
-    with tab3:
+    elif menu == "주문 변환 매핑":
         render_mapping_tab()
-    
-    with tab4:
+    elif menu == "변환 미리보기":
         render_preview_tab()
 
 
