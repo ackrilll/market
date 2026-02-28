@@ -182,7 +182,12 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] > div {
         width: 240px !important;
-        padding-top: 8px !important;
+        padding: 8px 0 0 0 !important;
+    }
+    section[data-testid="stSidebar"] .stRadio {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     /* 사이드바 프로필 영역 */
     .sidebar-profile {
@@ -246,11 +251,14 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 12px 20px !important;
+        padding: 12px 20px 12px 17px !important;
         margin: 0 !important;
         border-radius: 0 !important;
         font-size: 14px !important;
@@ -261,6 +269,7 @@ def inject_custom_css():
         border-left: 3px solid transparent;
         min-height: 44px !important;
         box-sizing: border-box !important;
+        width: 100% !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
         background: #3e4452 !important;
