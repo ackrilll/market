@@ -1,35 +1,40 @@
+"""
+엑셀 파일의 컬럼 구조를 확인하는 유틸리티 스크립트.
+사용법: python read.py <엑셀파일경로>
+"""
 import pandas as pd
+import sys
 import os
-import xlrd
 
-# root_path = r"C:\Users\skawl\OneDrive\문서\365건강농산\목표양식"
-# for basename in os.listdir(root_path):
-#     file_path = os.path.join(root_path, basename)
-#     raw_df = pd.read_excel(file_path)
-#     columns = raw_df.columns.tolist()
-#     if "우편번호" in columns:
-#         print("우편번호 칼럼 있음")
-#         pass
-#     else:
-#         print("우편번호 칼럼 없어서 다음 행 확인")
-#         columns = raw_df.values[0].tolist()
-#     print(f"-----------------------------{basename}-------------------------")
-#     print(columns)
 
-# file_path = r"C:\Users\skawl\OneDrive\문서\365건강농산\목표양식\한국라이스텍 백진주.xlsx"
-# raw_df = pd.read_excel(file_path)
-columns1 = raw_df.columns.tolist()
-print(columns1)
-columns2 = raw_df.values[0].tolist()
-print(columns2)
+def inspect_excel(file_path):
+    """엑셀 파일의 컬럼 구조를 출력합니다."""
+    if not os.path.exists(file_path):
+        print(f"[오류] 파일을 찾을 수 없습니다: {file_path}")
+        return
 
-# root_path = r"C:\Users\skawl\OneDrive\문서\365건강농산\목표양식"
-# list = os.listdir(root_path)
-# new_list =[]
-# for name in list:
-#     name = name.replace('.xlsx','')
-#     if "농협" in name:
-#         new_list.insert(0,name)
-#     else:
-#         new_list.append(name)
-# print(new_list)
+    print(f"=== {os.path.basename(file_path)} ===")
+    raw_df = pd.read_excel(file_path)
+
+    # 1행 컬럼명
+    columns1 = raw_df.columns.tolist()
+    print(f"헤더(1행) 컬럼: {columns1}")
+
+    # 2행 컬럼명 (헤더가 2행인 양식 확인용)
+    if len(raw_df) > 0:
+        columns2 = raw_df.values[0].tolist()
+        print(f"데이터(2행) 값:  {columns2}")
+
+    print(f"총 행 수: {len(raw_df)}")
+    print(f"총 컬럼 수: {len(columns1)}")
+    print()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("사용법: python read.py <엑셀파일경로>")
+        print("예시:   python read.py data/target_form/강화군농협.xlsx")
+        sys.exit(1)
+
+    for path in sys.argv[1:]:
+        inspect_excel(path)

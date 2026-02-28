@@ -16,7 +16,6 @@ from map import (
 )
 from customize_file import get_customize_config, apply_customization
 from vendor_manager import render_vendor_tab
-from keyword_manager import render_keyword_tab
 from order_mapping import render_mapping_tab
 from preview_tab import render_preview_tab
 
@@ -526,10 +525,9 @@ def main():
     """, unsafe_allow_html=True)
 
     # ── 탭 구조 ──
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📋 주문서 변환",
         "🏭 업체 관리",
-        "🏷️ 키워드 관리",
         "🔄 주문 변환 매핑",
         "👁️ 변환 미리보기",
     ])
@@ -541,12 +539,9 @@ def main():
         render_vendor_tab()
     
     with tab3:
-        render_keyword_tab()
-    
-    with tab4:
         render_mapping_tab()
     
-    with tab5:
+    with tab4:
         render_preview_tab()
 
 

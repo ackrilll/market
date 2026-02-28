@@ -1,7 +1,7 @@
 """
 업체 관리 탭 (vendor_manager.py)
 
-업체 추가/삭제, 양식 파일 업로드, 키워드 설정 UI를 제공합니다.
+업체 추가/삭제, 양식 파일 업로드/다운로드, 키워드 설정 UI를 통합 제공합니다.
 """
 import streamlit as st
 import pandas as pd
@@ -13,6 +13,7 @@ from map import (
     add_vendor_to_config,
     remove_vendor_from_config,
     update_vendor_in_config,
+    update_vendor_keywords,
     reload_config,
     _FORM_DIR,
 )
@@ -54,36 +55,155 @@ def _load_existing_form(vendor_name):
     return None, None
 
 
+def _get_form_file_path(form_filename):
+    """양식 파일의 전체 경로를 반환합니다."""
+    if not form_filename:
+        return None
+    filepath = os.path.join(_FORM_DIR, form_filename)
+    if os.path.exists(filepath):
+        return filepath
+    return None
+
+
 def render_vendor_tab():
     """업체 관리 탭 UI를 렌더링합니다."""
     st.subheader("🏭 업체 관리")
-    st.caption("업체를 추가/삭제하고, 주문 양식을 업로드하여 칼럼을 설정합니다.")
+    st.caption("업체를 추가/삭제하고, 키워드를 설정하며, 주문 양식을 관리합니다.")
 
-    # ── 업체 목록 테이블 ──
+    # ── 업체 목록 + 키워드 편집 통합 테이블 ──
     vendors = get_all_vendors()
 
     if vendors:
         st.markdown("### 📋 등록된 업체 목록")
-        
+
+        # 업체 목록 테이블 데이터 구성 (ID, 칼럼 수 제외)
         vendor_table_data = []
         for v in vendors:
             keywords = ", ".join(v.get("keywords", [v["name"]]))
-            col_count = len(v.get("target_columns", []))
-            has_form = v.get("form_file", "")
+            form_file = v.get("form_file", "")
             vendor_table_data.append({
-                "ID": v["id"],
                 "업체명": v["name"],
                 "키워드": keywords,
-                "칼럼 수": col_count,
-                "양식 파일": has_form if has_form else "미설정",
+                "양식 파일": form_file if form_file else "미설정",
             })
 
-        st.dataframe(
-            pd.DataFrame(vendor_table_data),
-            use_container_width=True,
-            hide_index=True,
-            height=min(400, len(vendor_table_data) * 40 + 40),
+        # ── 양식 파일 다운로드 가능한 테이블 ──
+        # st.dataframe 대신 커스텀 렌더링으로 양식 파일 클릭 다운로드 지원
+        for i, v in enumerate(vendors):
+            form_file = v.get("form_file", "")
+            keywords = ", ".join(v.get("keywords", [v["name"]]))
+
+            with st.container():
+                cols = st.columns([1.5, 2.5, 2, 0.8])
+                with cols[0]:
+                    st.markdown(f"**{v['name']}**")
+                with cols[1]:
+                    st.caption(f"🏷️ {keywords}")
+                with cols[2]:
+                    if form_file:
+                        form_path = _get_form_file_path(form_file)
+                        if form_path:
+                            with open(form_path, "rb") as f:
+                                file_bytes = f.read()
+                            st.download_button(
+                                label=f"📥 {form_file}",
+                                data=file_bytes,
+                                file_name=form_file,
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                key=f"dl_form_{v['id']}",
+                                use_container_width=True,
+                            )
+                        else:
+                            st.caption(f"⚠️ {form_file} (파일 없음)")
+                    else:
+                        st.caption("미설정")
+                with cols[3]:
+                    # 키워드 편집/상세 관리 진입 표시
+                    is_selected = st.session_state.get("vendor_detail_select") == v["name"]
+                    if is_selected:
+                        st.markdown("✅")
+
+        # 컬럼 헤더 (시각적 구분)
+        st.divider()
+
+        # ── 키워드 관리 (인라인 편집) ──
+        st.markdown("### 🏷️ 키워드 관리")
+        st.caption("업체를 선택하여 분류 키워드를 편집합니다. 수정 후 **💾 변경사항 저장** 버튼을 누르세요.")
+
+        vendor_names = [v["name"] for v in vendors]
+        selected_name = st.selectbox(
+            "🏭 업체 선택",
+            options=vendor_names,
+            key="kw_vendor_select",
         )
+
+        if selected_name:
+            vendor = get_vendor_by_name(selected_name)
+            if vendor:
+                vendor_id = vendor["id"]
+                current_keywords = list(vendor.get("keywords", [vendor["name"]]))
+
+                st.markdown(f"**{selected_name}** — 현재 키워드 **{len(current_keywords)}개**")
+
+                # data_editor 기반 인라인 편집
+                edit_df = pd.DataFrame({"키워드": current_keywords})
+
+                edited_df = st.data_editor(
+                    edit_df,
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    hide_index=True,
+                    key=f"kw_editor_{vendor_id}",
+                    column_config={
+                        "키워드": st.column_config.TextColumn(
+                            "키워드",
+                            help="업체 분류에 사용되는 키워드입니다. 주문서의 상품약어에 이 문자열이 포함되면 해당 업체로 분류됩니다.",
+                            required=True,
+                        ),
+                    },
+                )
+
+                # 편집된 키워드 추출 (빈 값 제거)
+                new_keywords = [
+                    str(kw).strip()
+                    for kw in edited_df["키워드"].tolist()
+                    if pd.notna(kw) and str(kw).strip()
+                ]
+
+                # 변경 여부 체크
+                has_changes = new_keywords != current_keywords
+
+                if has_changes:
+                    st.info("✏️ 키워드가 수정되었습니다. 저장 버튼을 눌러 적용하세요.")
+
+                # 저장 / 초기화 버튼
+                save_col, reset_col = st.columns([2, 1])
+                with save_col:
+                    save_disabled = not has_changes or len(new_keywords) == 0
+                    if st.button(
+                        "💾 변경사항 저장",
+                        type="primary",
+                        use_container_width=True,
+                        disabled=save_disabled,
+                        key=f"kw_save_{vendor_id}",
+                    ):
+                        if not new_keywords:
+                            st.error("⚠️ 최소 1개 이상의 키워드가 필요합니다.")
+                        else:
+                            try:
+                                update_vendor_keywords(vendor_id, new_keywords)
+                                reload_config()
+                                st.success(f"✅ **{selected_name}**의 키워드가 저장되었습니다. ({len(new_keywords)}개)")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ 저장 실패: {e}")
+
+                with reset_col:
+                    if st.button("↩️ 초기화", use_container_width=True, key=f"kw_reset_{vendor_id}"):
+                        st.rerun()
+
+                if not has_changes:
+                    st.caption("변경사항이 없습니다.")
     else:
         st.info("등록된 업체가 없습니다. 아래에서 업체를 추가하세요.")
 
@@ -177,14 +297,12 @@ def render_vendor_tab():
         if selected_name:
             vendor = get_vendor_by_name(selected_name)
             if vendor:
-                col1, col2, col3 = st.columns(3)
+                col1, col2 = st.columns(2)
                 with col1:
-                    st.metric("ID", vendor["id"])
-                with col2:
-                    st.metric("칼럼 수", len(vendor.get("target_columns", [])))
-                with col3:
                     keywords = vendor.get("keywords", [vendor["name"]])
                     st.metric("키워드 수", len(keywords))
+                with col2:
+                    st.metric("칼럼 수", len(vendor.get("target_columns", [])))
 
                 # 키워드 목록
                 st.markdown(f"**키워드:** {', '.join(vendor.get('keywords', [vendor['name']]))}")
