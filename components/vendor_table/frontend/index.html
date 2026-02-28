@@ -79,18 +79,19 @@
       opacity: 1;
     }
 
-    .drag-handle .grip-dots {
-      display: grid;
-      grid-template-columns: 5px 5px;
-      gap: 3px;
+    .drag-handle .grip-arrows {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
+      gap: 0;
+      line-height: 1;
     }
 
-    .drag-handle .grip-dots span {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: #2196F3;
+    .drag-handle .grip-arrows span {
+      font-size: 10px;
+      color: #aaa;
+      line-height: 8px;
     }
 
     /* ── 체크박스 ── */
@@ -358,7 +359,7 @@
         // 드래그 핸들
         const tdDrag = document.createElement("td");
         tdDrag.className = "drag-handle";
-        tdDrag.innerHTML = '<div class="grip-dots"><span></span><span></span><span></span><span></span><span></span><span></span></div>';
+        tdDrag.innerHTML = '<div class="grip-arrows"><span>▲</span><span>▼</span></div>';
         tdDrag.title = "드래그하여 순서 변경";
         tr.appendChild(tdDrag);
 
