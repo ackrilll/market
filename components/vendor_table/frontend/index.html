@@ -338,7 +338,7 @@
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 부모 프레임에서 직접 다운로드
+        // 파일 클릭 시 다운로드 (blob URL + 새 창)
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -347,21 +347,23 @@
             const mime = ext === "xlsx"
               ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               : "application/vnd.ms-excel";
-            try {
-              const a = window.parent.document.createElement("a");
-              a.href = "data:" + mime + ";base64," + row._form_file_data;
-              a.download = row.form_file;
-              a.style.display = "none";
-              window.parent.document.body.appendChild(a);
-              a.click();
-              setTimeout(() => { window.parent.document.body.removeChild(a); }, 100);
-            } catch (err) {
-              // fallback
+            const byteChars = atob(row._form_file_data);
+            const byteArr = new Uint8Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([byteArr], { type: mime });
+            const url = URL.createObjectURL(blob);
+            // 새 창으로 열어서 다운로드 (sandbox allow-popups 허용)
+            const w = window.open(url, "_blank");
+            if (!w) {
+              // 팝업 차단 시 fallback: 현재 프레임 내 <a> 클릭
               const a = document.createElement("a");
-              a.href = "data:application/octet-stream;base64," + row._form_file_data;
+              a.href = url;
               a.download = row.form_file;
+              document.body.appendChild(a);
               a.click();
+              document.body.removeChild(a);
             }
+            setTimeout(() => { URL.revokeObjectURL(url); }, 5000);
           }
         };
         zone.appendChild(nameSpan);
