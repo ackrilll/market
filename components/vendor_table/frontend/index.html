@@ -63,18 +63,24 @@
     /* ── 드래그 핸들 ── */
     .drag-handle {
       cursor: grab;
-      color: #bbb;
-      font-size: 18px;
+      color: transparent;
+      font-size: 16px;
       user-select: none;
       text-align: center;
-      width: 32px;
+      width: 24px;
+      padding: 0 4px !important;
+      transition: color 0.2s;
     }
 
     .drag-handle:active {
       cursor: grabbing;
     }
 
-    .drag-handle:hover {
+    tr:hover .drag-handle {
+      color: #bbb;
+    }
+
+    tr:hover .drag-handle:hover {
       color: #666;
     }
 
@@ -268,7 +274,7 @@
     <table class="vendor-table">
       <thead>
         <tr>
-          <th class="drag-handle" style="font-size:14px;">순서</th>
+          <th style="width:24px; padding:0;"></th>
           <th class="chk-cell">선택</th>
           <th>업체명</th>
           <th>분류키워드</th>
