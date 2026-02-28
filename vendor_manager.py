@@ -95,14 +95,19 @@ def render_vendor_tab():
     # ── 다운로드 버튼 (테이블 위에 표시) ──
     if "_vendor_dl_file" in st.session_state:
         st.markdown("""<style>
-        button[data-testid="stDownloadButton"] {
+        div[data-testid="stDownloadButton"] > button,
+        div[data-testid="stDownloadButton"] > button:focus,
+        div[data-testid="stDownloadButton"] > button:active,
+        .stDownloadButton > button {
             background-color: #1a73e8 !important;
             border-color: #1a73e8 !important;
             color: white !important;
         }
-        button[data-testid="stDownloadButton"]:hover {
+        div[data-testid="stDownloadButton"] > button:hover,
+        .stDownloadButton > button:hover {
             background-color: #1557b0 !important;
             border-color: #1557b0 !important;
+            color: white !important;
         }
         </style>""", unsafe_allow_html=True)
         dl_file = st.session_state["_vendor_dl_file"]
