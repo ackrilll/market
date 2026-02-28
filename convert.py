@@ -251,7 +251,7 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
-        padding: 0 !important;
+        padding: 0 0 0 12px !important;
         margin: 0 !important;
         width: 100% !important;
     }
