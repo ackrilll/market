@@ -338,14 +338,30 @@
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 다운로드 요청을 Python으로 전달
+        // 파일 클릭 시 부모 프레임에서 직접 다운로드
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
-          if (row.form_file && row.id !== null) {
-            const value = buildValue();
-            value.download_request = { vendor_id: row.id, form_file: row.form_file };
-            setComponentValue(value);
+          if (row._form_file_data) {
+            const ext = row.form_file.split(".").pop().toLowerCase();
+            const mime = ext === "xlsx"
+              ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              : "application/vnd.ms-excel";
+            try {
+              const a = window.parent.document.createElement("a");
+              a.href = "data:" + mime + ";base64," + row._form_file_data;
+              a.download = row.form_file;
+              a.style.display = "none";
+              window.parent.document.body.appendChild(a);
+              a.click();
+              setTimeout(() => { window.parent.document.body.removeChild(a); }, 100);
+            } catch (err) {
+              // fallback
+              const a = document.createElement("a");
+              a.href = "data:application/octet-stream;base64," + row._form_file_data;
+              a.download = row.form_file;
+              a.click();
+            }
           }
         };
         zone.appendChild(nameSpan);

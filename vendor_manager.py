@@ -92,64 +92,13 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 다운로드 버튼 (테이블 위에 표시) ──
-    if "_vendor_dl_file" in st.session_state:
-        st.markdown("""<style>
-        div[data-testid="stDownloadButton"] > button,
-        div[data-testid="stDownloadButton"] > button:focus,
-        div[data-testid="stDownloadButton"] > button:active,
-        .stDownloadButton > button {
-            background-color: #1a73e8 !important;
-            border-color: #1a73e8 !important;
-            color: white !important;
-            padding: 4px 16px !important;
-            font-size: 14px !important;
-        }
-        div[data-testid="stDownloadButton"] > button:hover,
-        .stDownloadButton > button:hover {
-            background-color: #1557b0 !important;
-            border-color: #1557b0 !important;
-            color: white !important;
-        }
-        </style>""", unsafe_allow_html=True)
-        dl_file = st.session_state["_vendor_dl_file"]
-        filepath = _get_form_file_path(dl_file)
-        if filepath:
-            with open(filepath, "rb") as f:
-                file_bytes = f.read()
-            ext = os.path.splitext(dl_file)[1].lower()
-            mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    if ext == ".xlsx"
-                    else "application/vnd.ms-excel")
-            col_dl, col_x, col_space = st.columns([3, 0.5, 6.5])
-            with col_dl:
-                st.download_button(
-                    label=f"{dl_file} 다운로드",
-                    data=file_bytes,
-                    file_name=dl_file,
-                    mime=mime,
-                    key="dl_form_active",
-                    type="primary",
-                )
-            with col_x:
-                if st.button("X", key="dl_close"):
-                    del st.session_state["_vendor_dl_file"]
-                    st.rerun()
+    # (다운로드는 JS 컴포넌트에서 직접 처리)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
-        # 다운로드 요청이 있으면 우선 처리 (rows 변경과 분리)
-        dl_req = result.get("download_request")
-        if dl_req:
-            form_file = dl_req.get("form_file", "")
-            if form_file:
-                st.session_state["_vendor_dl_file"] = form_file
-                st.rerun()
-            return
-
         changes_applied = False
 
         # 1) 삭제 처리 (이미 삭제된 ID는 무시)
