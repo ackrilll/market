@@ -633,7 +633,6 @@ def main():
             label_visibility="collapsed",
         )
 
-        st.caption("v3.0.0 | 2026-02-12")
 
     # ── 메인 콘텐츠 ──
     if menu == "주문서 변환":
