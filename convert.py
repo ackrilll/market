@@ -173,13 +173,6 @@ def inject_custom_css():
         top: 42px !important;
         height: calc(100vh - 42px) !important;
     }
-    /* 사이드바 접기 버튼 숨김 */
-    button[data-testid="stSidebarCollapseButton"] {
-        display: none !important;
-    }
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
     /* 사이드바 강제 펼침 */
     section[data-testid="stSidebar"] {
         width: 240px !important;
@@ -207,11 +200,39 @@ def inject_custom_css():
         align-items: center;
         justify-content: center;
         margin-bottom: 14px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
     }
-    .sidebar-profile-avatar svg {
+    .sidebar-profile-avatar svg.default-icon {
         width: 40px;
         height: 40px;
         fill: #8a919a;
+    }
+    .sidebar-profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+    .sidebar-profile-avatar .avatar-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        border-radius: 50%;
+    }
+    .sidebar-profile-avatar:hover .avatar-overlay {
+        opacity: 1;
+    }
+    .sidebar-profile-avatar .avatar-overlay svg {
+        width: 28px;
+        height: 28px;
+        fill: #fff;
     }
     .sidebar-profile-name {
         font-size: 16px;
@@ -229,7 +250,7 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 14px 20px !important;
+        padding: 11px 20px !important;
         margin: 0 !important;
         border-radius: 0 !important;
         font-size: 14px !important;
@@ -249,6 +270,17 @@ def inject_custom_css():
         color: #fff !important;
         font-weight: 600 !important;
         border-left: 3px solid #03C75A;
+    }
+    /* 사이드바 접기/열기 버튼 완전 숨김 */
+    button[data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarNavCollapseButton"],
+    [data-testid="collapsedControl"],
+    .stSidebarCollapse {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
     }
     /* 라디오 버튼 원형 숨김 */
     section[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
@@ -690,16 +722,80 @@ def main():
     # ── 사이드바: 네비게이션 ──
     current_nh_list = get_nh_list()
     with st.sidebar:
-        # 프로필 영역 (eldymarket 스타일)
-        st.markdown("""
-        <div class="sidebar-profile">
-            <div class="sidebar-profile-avatar">
-                <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+        # 프로필 영역 (eldymarket 스타일 + 드래그앤드롭 아바타)
+        import streamlit.components.v1 as profile_comp
+        profile_comp.html("""
+        <style>
+            body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+            .profile-wrap {
+                display: flex; flex-direction: column; align-items: center;
+                padding: 24px 16px 12px 16px; font-family: 'Noto Sans KR', sans-serif;
+            }
+            .avatar {
+                width: 80px; height: 80px; border-radius: 50%; background: #4a4f5c;
+                display: flex; align-items: center; justify-content: center;
+                position: relative; overflow: hidden; cursor: pointer; margin-bottom: 14px;
+            }
+            .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+            .avatar .overlay {
+                position: absolute; top:0; left:0; right:0; bottom:0;
+                background: rgba(0,0,0,0.5); display: flex; align-items: center;
+                justify-content: center; opacity: 0; transition: opacity 0.2s; border-radius: 50%;
+            }
+            .avatar:hover .overlay { opacity: 1; }
+            .avatar.dragover { border: 2px dashed #03C75A; }
+            .overlay svg { width: 28px; height: 28px; fill: #fff; }
+            .name { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+            .role { font-size: 12px; color: #8a919a; }
+        </style>
+        <div class="profile-wrap">
+            <div class="avatar" id="avatarDrop">
+                <svg class="default-icon" id="defaultIcon" viewBox="0 0 24 24" style="width:40px;height:40px;fill:#8a919a;">
+                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                </svg>
+                <div class="overlay">
+                    <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                </div>
             </div>
-            <span class="sidebar-profile-name">365건강농산</span>
-            <span class="sidebar-profile-role">주문서 관리자</span>
+            <div class="name">365건강농산</div>
+            <div class="role">주문서 관리자</div>
         </div>
-        """, unsafe_allow_html=True)
+        <script>
+            var avatar = document.getElementById('avatarDrop');
+            var defaultIcon = document.getElementById('defaultIcon');
+            // 저장된 이미지 복원
+            var saved = localStorage.getItem('profile_avatar');
+            if (saved) {
+                var img = document.createElement('img');
+                img.src = saved;
+                defaultIcon.style.display = 'none';
+                avatar.insertBefore(img, avatar.firstChild);
+            }
+            avatar.addEventListener('dragover', function(e) {
+                e.preventDefault(); avatar.classList.add('dragover');
+            });
+            avatar.addEventListener('dragleave', function() {
+                avatar.classList.remove('dragover');
+            });
+            avatar.addEventListener('drop', function(e) {
+                e.preventDefault(); avatar.classList.remove('dragover');
+                var file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        localStorage.setItem('profile_avatar', ev.target.result);
+                        var existing = avatar.querySelector('img');
+                        if (existing) existing.remove();
+                        var img = document.createElement('img');
+                        img.src = ev.target.result;
+                        defaultIcon.style.display = 'none';
+                        avatar.insertBefore(img, avatar.firstChild);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        </script>
+        """, height=170)
         st.divider()
 
         # 네비게이션 메뉴
