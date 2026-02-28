@@ -280,7 +280,7 @@ def inject_custom_css():
         background: #3e4452 !important;
         color: #fff !important;
         font-weight: 600 !important;
-        border-left: 3px solid #2196F3;
+        border-left: 4px solid #2196F3 !important;
     }
     /* 사이드바 접기/열기 버튼 완전 숨김 (hover 포함) */
     button[data-testid="stSidebarCollapseButton"],
