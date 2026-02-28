@@ -97,6 +97,28 @@ def render_vendor_tab():
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
+        # 다운로드 요청이 있으면 우선 처리 (rows 변경과 분리)
+        dl_req = result.get("download_request")
+        if dl_req:
+            form_file = dl_req.get("form_file", "")
+            if form_file:
+                filepath = _get_form_file_path(form_file)
+                if filepath:
+                    with open(filepath, "rb") as f:
+                        file_bytes = f.read()
+                    ext = os.path.splitext(form_file)[1].lower()
+                    mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            if ext == ".xlsx"
+                            else "application/vnd.ms-excel")
+                    st.download_button(
+                        label=f"{form_file} 다운로드",
+                        data=file_bytes,
+                        file_name=form_file,
+                        mime=mime,
+                        key="dl_form_request",
+                    )
+            return  # 다운로드 요청 시 rows 처리 건너뛰기
+
         changes_applied = False
 
         # 1) 삭제 처리 (이미 삭제된 ID는 무시)
@@ -191,24 +213,3 @@ def render_vendor_tab():
         if changes_applied:
             reload_config()
             st.rerun()
-
-        # 3) 다운로드 요청 처리
-        dl_req = result.get("download_request")
-        if dl_req:
-            form_file = dl_req.get("form_file", "")
-            if form_file:
-                filepath = _get_form_file_path(form_file)
-                if filepath:
-                    with open(filepath, "rb") as f:
-                        file_bytes = f.read()
-                    ext = os.path.splitext(form_file)[1].lower()
-                    mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            if ext == ".xlsx"
-                            else "application/vnd.ms-excel")
-                    st.download_button(
-                        label=f"{form_file} 다운로드",
-                        data=file_bytes,
-                        file_name=form_file,
-                        mime=mime,
-                        key="dl_form_request",
-                    )
