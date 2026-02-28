@@ -102,6 +102,8 @@ def render_vendor_tab():
             background-color: #1a73e8 !important;
             border-color: #1a73e8 !important;
             color: white !important;
+            padding: 4px 16px !important;
+            font-size: 14px !important;
         }
         div[data-testid="stDownloadButton"] > button:hover,
         .stDownloadButton > button:hover {
@@ -119,8 +121,8 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
-            col1, col2 = st.columns([4, 1])
-            with col1:
+            col_dl, col_x, col_space = st.columns([3, 0.5, 6.5])
+            with col_dl:
                 st.download_button(
                     label=f"{dl_file} 다운로드",
                     data=file_bytes,
@@ -129,8 +131,8 @@ def render_vendor_tab():
                     key="dl_form_active",
                     type="primary",
                 )
-            with col2:
-                if st.button("닫기", key="dl_close"):
+            with col_x:
+                if st.button("X", key="dl_close"):
                     del st.session_state["_vendor_dl_file"]
                     st.rerun()
 
