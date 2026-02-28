@@ -27,9 +27,17 @@ def _save_form_file_from_bytes(file_bytes, vendor_name, original_filename):
     ext = os.path.splitext(original_filename)[1]
     filename = f"{vendor_name}{ext}"
     filepath = os.path.join(_FORM_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(file_bytes)
-    return filename
+    import time
+    for attempt in range(3):
+        try:
+            with open(filepath, "wb") as f:
+                f.write(file_bytes)
+            return filename
+        except PermissionError:
+            if attempt < 2:
+                time.sleep(0.5)
+            else:
+                raise
 
 
 def _read_form_columns_from_bytes(file_bytes):
