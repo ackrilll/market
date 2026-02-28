@@ -251,7 +251,7 @@ def inject_custom_css():
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
-        padding: 0 12px !important;
+        padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -259,9 +259,9 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 12px 10px !important;
+        padding: 12px 20px !important;
         margin: 0 !important;
-        border-radius: 4px !important;
+        border-radius: 0 !important;
         font-size: 14px !important;
         font-weight: 500 !important;
         color: #d8dee4 !important;
