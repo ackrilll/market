@@ -338,27 +338,29 @@
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 다운로드
+        // 파일 클릭 시 다운로드 (부모 프레임을 통해 sandbox 우회)
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
           if (row._form_file_data) {
-            const ext = row.form_file.split(".").pop().toLowerCase();
-            const mime = ext === "xlsx"
-              ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              : "application/vnd.ms-excel";
-            const byteChars = atob(row._form_file_data);
-            const byteArr = new Uint8Array(byteChars.length);
-            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-            const blob = new Blob([byteArr], { type: mime });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = row.form_file;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            try {
+              const ext = row.form_file.split(".").pop().toLowerCase();
+              const mime = ext === "xlsx"
+                ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                : "application/vnd.ms-excel";
+              const a = window.parent.document.createElement("a");
+              a.href = "data:" + mime + ";base64," + row._form_file_data;
+              a.download = row.form_file;
+              window.parent.document.body.appendChild(a);
+              a.click();
+              window.parent.document.body.removeChild(a);
+            } catch (err) {
+              // fallback: 현재 프레임에서 시도
+              const a = document.createElement("a");
+              a.href = "data:application/octet-stream;base64," + row._form_file_data;
+              a.download = row.form_file;
+              a.click();
+            }
           }
         };
         zone.appendChild(nameSpan);
