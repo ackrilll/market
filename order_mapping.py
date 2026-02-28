@@ -60,7 +60,7 @@ def _load_vendor_form(vendor_name):
 
 def render_mapping_tab():
     """주문 변환 매핑 탭 UI를 렌더링합니다."""
-    st.subheader(" 주문 변환 매핑")
+    st.subheader("매핑 관리")
     st.caption("원본 주문서의 칼럼을 업체 양식 칼럼에 매핑하고, 분류 기준 칼럼을 설정합니다.")
 
     vendors = get_all_vendors()

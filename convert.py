@@ -887,7 +887,7 @@ def main():
         # 네비게이션 메뉴
         menu = st.radio(
             "메뉴",
-            ["주문서 변환", "업체 관리", "주문 변환 매핑", "변환 미리보기"],
+            ["주문서 변환", "업체 관리", "매핑 관리", "변환 미리보기"],
             label_visibility="collapsed",
         )
 
@@ -897,7 +897,7 @@ def main():
         render_convert_tab()
     elif menu == "업체 관리":
         render_vendor_tab()
-    elif menu == "주문 변환 매핑":
+    elif menu == "매핑 관리":
         render_mapping_tab()
     elif menu == "변환 미리보기":
         render_preview_tab()
