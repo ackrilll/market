@@ -503,6 +503,18 @@
         const newVendors = args.vendors;
         const currentIds = new Set(rows.filter(r => r.id !== null).map(r => r.id));
         const newIds = new Set(newVendors.map(v => v.id));
+        const newVendorNames = new Set(newVendors.map(v => v.name));
+
+        // 저장 완료된 새 행 제거 (이름이 일치하는 _is_new 행)
+        rows = rows.filter(r => {
+          if (r._is_new && r.id === null && r.name && newVendorNames.has(r.name.trim())) {
+            return false;
+          }
+          return true;
+        });
+
+        // 삭제된 업체 제거
+        rows = rows.filter(r => r.id === null || newIds.has(r.id));
 
         // 신규 업체 감지 (Python에서 추가된 경우)
         newVendors.forEach(v => {
@@ -513,9 +525,6 @@
             });
           }
         });
-
-        // 삭제된 업체 제거
-        rows = rows.filter(r => r.id === null || newIds.has(r.id));
 
         // 기존 행의 form_file 갱신 (파일 업로드 후 Python에서 업데이트된 경우)
         rows.forEach(r => {
