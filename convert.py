@@ -274,12 +274,14 @@ def inject_custom_css():
     /* 사이드바 접기/열기 버튼 완전 숨김 (hover 포함) */
     button[data-testid="stSidebarCollapseButton"],
     button[data-testid="stSidebarNavCollapseButton"],
+    button[data-testid="baseButton-headerNoPadding"],
+    button[data-testid="baseButton-header"],
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"],
     .stSidebarCollapse,
     section[data-testid="stSidebar"] > button,
     section[data-testid="stSidebar"] > div > button:first-child,
-    section[data-testid="stSidebar"]:hover button[data-testid="stSidebarCollapseButton"],
+    section[data-testid="stSidebar"]:hover button[data-testid="baseButton-headerNoPadding"],
     section[data-testid="stSidebar"] button[kind="header"],
     section[data-testid="stSidebar"] button[aria-label*="Close"],
     section[data-testid="stSidebar"] button[aria-label*="sidebar"] {
@@ -729,6 +731,7 @@ def main():
             function removeCollapseBtn() {
                 var btns = parent.querySelectorAll(
                     'button[data-testid="stSidebarCollapseButton"],' +
+                    'button[data-testid="baseButton-headerNoPadding"],' +
                     'button[data-testid="baseButton-header"],' +
                     '[data-testid="collapsedControl"]'
                 );
