@@ -222,11 +222,46 @@ def render_vendor_tab():
 
     # ── 양식 파일 관리 ──
     st.markdown("### 📂 양식 파일 관리")
-    st.caption("양식 파일을 업로드하거나 변경할 업체를 선택하세요.")
 
     if not vendors:
         st.info("등록된 업체가 없습니다. 위 테이블에서 업체를 먼저 추가하세요.")
         return
+
+    # ── 양식 파일 바로 열기 (다운로드 그리드) ──
+    vendors_with_files = [v for v in vendors if v.get("form_file")]
+    if vendors_with_files:
+        st.caption("📥 양식 파일을 클릭하면 다운로드하여 열어볼 수 있습니다.")
+        NUM_COLS = 4
+        cols = st.columns(NUM_COLS)
+        for i, v in enumerate(vendors_with_files):
+            form_file = v["form_file"]
+            form_path = _get_form_file_path(form_file)
+            with cols[i % NUM_COLS]:
+                if form_path:
+                    with open(form_path, "rb") as f:
+                        file_bytes = f.read()
+                    st.download_button(
+                        label=f"📄 {v['name']}",
+                        data=file_bytes,
+                        file_name=form_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"dl_form_{v['id']}",
+                        use_container_width=True,
+                    )
+                else:
+                    st.button(
+                        f"⚠️ {v['name']}",
+                        disabled=True,
+                        key=f"dl_form_missing_{v['id']}",
+                        use_container_width=True,
+                    )
+    else:
+        st.caption("양식 파일이 등록된 업체가 없습니다.")
+
+    st.divider()
+
+    # ── 양식 파일 업로드 (드래그 앤 드롭) ──
+    st.caption("🔄 양식 파일을 변경할 업체를 선택한 뒤, 파일을 드래그 앤 드롭하세요. 업로드 즉시 자동 적용됩니다.")
 
     vendor_names = [v["name"] for v in vendors]
     selected_vendor = st.selectbox(
@@ -239,52 +274,29 @@ def render_vendor_tab():
         vendor = get_vendor_by_name(selected_vendor)
         if vendor:
             vendor_id = vendor["id"]
-            form_file = vendor.get("form_file", "")
 
-            # 현재 양식 파일 다운로드
-            if form_file:
-                form_path = _get_form_file_path(form_file)
-                if form_path:
-                    dl_col, info_col = st.columns([1, 2])
-                    with dl_col:
-                        with open(form_path, "rb") as f:
-                            file_bytes = f.read()
-                        st.download_button(
-                            label=f"📥 {form_file}",
-                            data=file_bytes,
-                            file_name=form_file,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key=f"dl_form_{vendor_id}",
-                            use_container_width=True,
-                        )
-                    with info_col:
-                        st.caption(f"현재 양식: {form_file}")
-                else:
-                    st.caption(f"⚠️ {form_file} (파일을 찾을 수 없습니다)")
-            else:
-                st.caption("양식 파일이 설정되지 않았습니다.")
-
-            # 양식 파일 업로드/변경
+            # 양식 파일 업로드 (드래그 앤 드롭 지원)
             update_form = st.file_uploader(
-                "새 양식 파일 업로드",
+                f"📂 {selected_vendor} 양식 파일 (드래그 앤 드롭 또는 클릭하여 업로드)",
                 type=["xlsx", "xls"],
                 key=f"update_form_{vendor_id}",
             )
+
+            # 업로드 즉시 자동 적용
             if update_form is not None:
                 new_cols, preview = _read_form_columns(update_form)
                 if new_cols:
                     st.dataframe(preview, use_container_width=True, height=150)
                     st.caption(f"감지된 칼럼 ({len(new_cols)}개): {', '.join(new_cols)}")
 
-                    if st.button("📥 양식 적용", key=f"apply_form_{vendor_id}"):
-                        try:
-                            form_fn = _save_form_file(update_form, selected_vendor)
-                            update_vendor_in_config(vendor_id, {
-                                "target_columns": new_cols,
-                                "form_file": form_fn,
-                            })
-                            reload_config()
-                            st.success("✅ 양식이 업데이트되었습니다!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"❌ 양식 업데이트 실패: {e}")
+                    try:
+                        form_fn = _save_form_file(update_form, selected_vendor)
+                        update_vendor_in_config(vendor_id, {
+                            "target_columns": new_cols,
+                            "form_file": form_fn,
+                        })
+                        reload_config()
+                        st.success(f"✅ '{selected_vendor}' 양식이 자동 적용되었습니다!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ 양식 업데이트 실패: {e}")
