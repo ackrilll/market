@@ -808,6 +808,7 @@ def main():
                 var img = document.createElement('img');
                 img.src = dataUrl;
                 defaultIcon.style.display = 'none';
+                avatar.style.background = '#fff';
                 avatar.insertBefore(img, avatar.firstChild);
             }
             function handleFile(file) {
