@@ -146,14 +146,22 @@ def inject_custom_css():
         background: #2b2f3a;
         border-right: 1px solid #3a3e4a;
     }
-    /* 사이드바 접기 버튼 숨기고 고정 */
-    button[data-testid="stSidebarCollapseButton"],
+    /* 사이드바 접기 버튼만 숨기고, 항상 펼쳐진 상태 유지 */
+    button[data-testid="stSidebarCollapseButton"] {
+        display: none !important;
+    }
     [data-testid="collapsedControl"] {
         display: none !important;
     }
+    /* 사이드바 강제 펼침 */
     section[data-testid="stSidebar"] {
         width: 240px !important;
         min-width: 240px !important;
+        transform: none !important;
+        transition: none !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        width: 240px !important;
     }
     section[data-testid="stSidebar"] .stRadio > div {
         gap: 0 !important;
