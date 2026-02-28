@@ -194,34 +194,33 @@ def inject_custom_css():
     /* 사이드바 프로필 영역 */
     .sidebar-profile {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
+        padding: 24px 16px 16px 16px;
     }
     .sidebar-profile-avatar {
-        width: 40px;
-        height: 40px;
+        width: 64px;
+        height: 64px;
         border-radius: 50%;
-        background: #03C75A;
+        background: #4a4f5c;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        font-weight: 700;
-        color: #fff;
-        flex-shrink: 0;
+        margin-bottom: 10px;
     }
-    .sidebar-profile-info {
-        display: flex;
-        flex-direction: column;
+    .sidebar-profile-avatar svg {
+        width: 32px;
+        height: 32px;
+        fill: #8a919a;
     }
     .sidebar-profile-name {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
         color: #fff;
+        margin-bottom: 2px;
     }
     .sidebar-profile-role {
-        font-size: 11px;
+        font-size: 12px;
         color: #8a919a;
     }
     section[data-testid="stSidebar"] .stRadio > div {
@@ -694,11 +693,11 @@ def main():
         # 프로필 영역 (eldymarket 스타일)
         st.markdown("""
         <div class="sidebar-profile">
-            <div class="sidebar-profile-avatar">365</div>
-            <div class="sidebar-profile-info">
-                <span class="sidebar-profile-name">365건강농산</span>
-                <span class="sidebar-profile-role">주문서 관리자</span>
+            <div class="sidebar-profile-avatar">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
             </div>
+            <span class="sidebar-profile-name">365건강농산</span>
+            <span class="sidebar-profile-role">주문서 관리자</span>
         </div>
         """, unsafe_allow_html=True)
         st.divider()
