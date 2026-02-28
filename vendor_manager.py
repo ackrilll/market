@@ -97,7 +97,7 @@ def _get_form_file_path(form_filename):
 def render_vendor_tab():
     """업체 관리 탭 UI를 렌더링합니다."""
     st.subheader("업체 관리")
-    st.caption("샤방넷 통합파일에서 데이터를 추출할 분류 키워드를 지정하고, 해당 데이터를 출력할 업체별 양식 파일을 등록해 주세요.")
+    st.markdown('<p style="font-size:16px; color:#888; margin-top:-10px;">샤방넷 통합파일에서 데이터를 추출할 분류 키워드를 지정하고, 해당 데이터를 출력할 업체별 양식 파일을 등록해 주세요.</p>', unsafe_allow_html=True)
     st.markdown("""<style>
     .stCustomComponentV1 { margin-top: -16px; }
     </style>""", unsafe_allow_html=True)
