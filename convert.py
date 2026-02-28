@@ -184,10 +184,16 @@ def inject_custom_css():
         width: 240px !important;
         padding: 8px 0 0 0 !important;
     }
-    section[data-testid="stSidebar"] .stRadio {
+    section[data-testid="stSidebar"] .stRadio,
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlock"],
+    section[data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"],
+    section[data-testid="stSidebar"] .stElementContainer,
+    section[data-testid="stSidebar"] [data-testid="element-container"] {
         width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
     /* 사이드바 프로필 영역 */
     .sidebar-profile {
