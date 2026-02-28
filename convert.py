@@ -250,7 +250,7 @@ def inject_custom_css():
     section[data-testid="stSidebar"] .stRadio > div > label {
         display: flex !important;
         align-items: center;
-        padding: 11px 20px !important;
+        padding: 12px 20px !important;
         margin: 0 !important;
         border-radius: 0 !important;
         font-size: 14px !important;
@@ -259,6 +259,8 @@ def inject_custom_css():
         cursor: pointer;
         transition: background 0.15s;
         border-left: 3px solid transparent;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
     }
     section[data-testid="stSidebar"] .stRadio > div > label:hover {
         background: #3e4452 !important;
@@ -269,7 +271,7 @@ def inject_custom_css():
         background: #3e4452 !important;
         color: #fff !important;
         font-weight: 600 !important;
-        border-left: 3px solid #03C75A;
+        border-left: 3px solid #adb5bd;
     }
     /* 사이드바 접기/열기 버튼 완전 숨김 (hover 포함) */
     button[data-testid="stSidebarCollapseButton"],
