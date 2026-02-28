@@ -306,7 +306,7 @@
         kwInput.type = "text";
         kwInput.className = "text-input";
         kwInput.value = row.keywords || "";
-        kwInput.placeholder = "쉼표로 구분된 키워드";
+        kwInput.placeholder = "분류키워드 입력";
         kwInput.onchange = () => {
           row.keywords = kwInput.value.trim();
           debounceSendValue();
