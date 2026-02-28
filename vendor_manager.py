@@ -104,6 +104,10 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
+            # 다운로드 버튼을 숨긴 채 렌더링 (자동 클릭용)
+            st.markdown("""<style>
+            div[data-testid="stDownloadButton"] { position:absolute; opacity:0; pointer-events:none; }
+            </style>""", unsafe_allow_html=True)
             st.download_button(
                 label=f"{dl_file} 다운로드",
                 data=file_bytes,
