@@ -34,6 +34,9 @@ data/raw/
 # Test data (개인정보 포함)
 user_test/
 
+# Streamlit secrets (민감 정보)
+.streamlit/secrets.toml
+
 # IDE / Claude settings
 .claude/
 

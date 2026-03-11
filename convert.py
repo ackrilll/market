@@ -7,6 +7,7 @@ import html
 import logging
 
 logger = logging.getLogger(__name__)
+from auth import check_auth, render_login_page, get_current_user, logout
 from map import (
     get_ganghwagun_rename_map,
     get_ganghwagun_target_columns,
@@ -14,8 +15,8 @@ from map import (
     get_constant_values,
     get_copy_map,
     get_split_config,
-    nh_list,
     get_nh_list,
+    load_user_config,
 )
 from customize_file import get_customize_config, apply_customization
 from vendor_manager import render_vendor_tab
@@ -714,83 +715,95 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded"
     )
-    
+
+    # ── 인증 게이트 ──
+    if not check_auth():
+        render_login_page()
+        return
+
+    user = get_current_user()
+    display_name = html.escape(user.get("display_name", ""))
+
+    # 유저별 설정 로드 (최초 1회)
+    if "user_config" not in st.session_state:
+        load_user_config(user["user_id"])
+
     inject_custom_css()
 
     # ── 상단 헤더 바 (components.html로 렌더링 - iframe 바깥으로 헤더 생성) ──
     import streamlit.components.v1 as header_comp
-    header_comp.html("""
+    header_comp.html(f"""
     <script>
         // 부모 페이지에 헤더 바 삽입
-        (function() {
+        (function() {{
             var parent = window.parent.document;
-            if (!parent.getElementById('custom-top-header')) {
-                var header = parent.createElement('div');
-                header.id = 'custom-top-header';
-                header.className = 'top-header-bar';
-                header.innerHTML = '<span class="top-header-title">주문서 변환 시스템</span>' +
-                    '<span class="top-header-user">365건강농산 님 <span style="color:#555; margin:0 4px;">|</span> <a href="#" style="color:#aaa; text-decoration:none;">로그아웃</a></span>';
-                parent.body.appendChild(header);
-            }
+            var existing = parent.getElementById('custom-top-header');
+            if (existing) existing.remove();
+            var header = parent.createElement('div');
+            header.id = 'custom-top-header';
+            header.className = 'top-header-bar';
+            header.innerHTML = '<span class="top-header-title">주문서 변환 시스템</span>' +
+                '<span class="top-header-user">{display_name} 님</span>';
+            parent.body.appendChild(header);
             // 사이드바 접기 버튼 제거
-            function removeCollapseBtn() {
+            function removeCollapseBtn() {{
                 var btns = parent.querySelectorAll(
                     'button[data-testid="stSidebarCollapseButton"],' +
                     'button[data-testid="baseButton-headerNoPadding"],' +
                     'button[data-testid="baseButton-header"],' +
                     '[data-testid="collapsedControl"]'
                 );
-                btns.forEach(function(b) { b.style.display = 'none'; b.remove(); });
-            }
+                btns.forEach(function(b) {{ b.style.display = 'none'; b.remove(); }});
+            }}
             removeCollapseBtn();
             // MutationObserver로 동적 버튼도 즉시 제거
-            var observer = new MutationObserver(function() { removeCollapseBtn(); });
+            var observer = new MutationObserver(function() {{ removeCollapseBtn(); }});
             var sidebar = parent.querySelector('section[data-testid="stSidebar"]');
-            if (sidebar) observer.observe(sidebar, { childList: true, subtree: true });
-            observer.observe(parent.body, { childList: true, subtree: true });
-        })();
+            if (sidebar) observer.observe(sidebar, {{ childList: true, subtree: true }});
+            observer.observe(parent.body, {{ childList: true, subtree: true }});
+        }})();
     </script>
     """, height=0)
-    
+
     # ── 사이드바: 네비게이션 ──
     current_nh_list = get_nh_list()
     with st.sidebar:
         # 프로필 영역 (eldymarket 스타일 + 드래그앤드롭 아바타)
         import streamlit.components.v1 as profile_comp
-        profile_comp.html("""
+        profile_comp.html(f"""
         <style>
-            body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
-            .profile-wrap {
+            body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; }}
+            .profile-wrap {{
                 display: flex; flex-direction: column; align-items: center;
                 padding: 24px 16px 12px 16px; font-family: 'Noto Sans KR', sans-serif;
-            }
-            .avatar {
+            }}
+            .avatar {{
                 width: 80px; height: 80px; border-radius: 50%; background: #4a4f5c;
                 display: flex; align-items: center; justify-content: center;
                 position: relative; overflow: hidden; cursor: pointer; margin-bottom: 14px;
-            }
-            .avatar img {
+            }}
+            .avatar img {{
                 position: absolute; top: 0; left: 0;
                 width: 100%; height: 100%;
                 object-fit: cover;
                 border-radius: 50%;
-            }
-            .avatar .overlay {
+            }}
+            .avatar .overlay {{
                 position: absolute; top:0; left:0; right:0; bottom:0;
                 background: rgba(0,0,0,0.5); display: flex; align-items: center;
                 justify-content: center; gap: 8px; opacity: 0; transition: opacity 0.2s; border-radius: 50%;
-            }
-            .avatar:hover .overlay { opacity: 1; }
-            .avatar.dragover { border: 2px dashed #03C75A; }
-            .overlay svg { width: 24px; height: 24px; fill: #fff; cursor: pointer; }
-            .overlay .reset-btn {
+            }}
+            .avatar:hover .overlay {{ opacity: 1; }}
+            .avatar.dragover {{ border: 2px dashed #03C75A; }}
+            .overlay svg {{ width: 24px; height: 24px; fill: #fff; cursor: pointer; }}
+            .overlay .reset-btn {{
                 width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.2);
                 display: none; align-items: center; justify-content: center; cursor: pointer;
                 font-size: 14px; color: #fff; font-weight: bold; border: none; padding: 0;
-            }
-            .overlay .reset-btn.show { display: flex; }
-            .name { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }
-            .role { font-size: 12px; color: #8a919a; }
+            }}
+            .overlay .reset-btn.show {{ display: flex; }}
+            .name {{ font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 3px; }}
+            .role {{ font-size: 12px; color: #8a919a; }}
         </style>
         <div class="profile-wrap">
             <div class="avatar" id="avatarDrop">
@@ -802,7 +815,7 @@ def main():
                     <button class="reset-btn" id="resetBtn" title="기본 이미지로 변경">✕</button>
                 </div>
             </div>
-            <div class="name">365건강농산</div>
+            <div class="name">{display_name}</div>
             <div class="role">주문서 관리자</div>
         </div>
         <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
@@ -813,7 +826,7 @@ def main():
             var resetBtn = document.getElementById('resetBtn');
             var cameraBtn = document.getElementById('cameraBtn');
 
-            function setAvatar(dataUrl) {
+            function setAvatar(dataUrl) {{
                 localStorage.setItem('profile_avatar', dataUrl);
                 var old = avatar.querySelector('img');
                 if (old) old.remove();
@@ -822,51 +835,51 @@ def main():
                 defaultIcon.style.display = 'none';
                 avatar.insertBefore(img, avatar.firstChild);
                 resetBtn.classList.add('show');
-            }
-            function resetAvatar() {
+            }}
+            function resetAvatar() {{
                 localStorage.removeItem('profile_avatar');
                 var old = avatar.querySelector('img');
                 if (old) old.remove();
                 defaultIcon.style.display = '';
                 avatar.style.background = '#4a4f5c';
                 resetBtn.classList.remove('show');
-            }
-            function handleFile(file) {
-                if (file && file.type.startsWith('image/')) {
+            }}
+            function handleFile(file) {{
+                if (file && file.type.startsWith('image/')) {{
                     var r = new FileReader();
-                    r.onload = function(e) { setAvatar(e.target.result); };
+                    r.onload = function(e) {{ setAvatar(e.target.result); }};
                     r.readAsDataURL(file);
-                }
-            }
+                }}
+            }}
             // 저장된 이미지 복원
             var saved = localStorage.getItem('profile_avatar');
             if (saved) setAvatar(saved);
             // 카메라 클릭 → 파일 선택
-            cameraBtn.addEventListener('click', function(e) {
+            cameraBtn.addEventListener('click', function(e) {{
                 e.stopPropagation(); fileInput.value = ''; fileInput.click();
-            });
-            fileInput.addEventListener('change', function(e) {
+            }});
+            fileInput.addEventListener('change', function(e) {{
                 if (e.target.files[0]) handleFile(e.target.files[0]);
-            });
+            }});
             // 리셋 버튼
-            resetBtn.addEventListener('click', function(e) {
+            resetBtn.addEventListener('click', function(e) {{
                 e.stopPropagation(); resetAvatar();
-            });
+            }});
             // 우클릭으로도 기본 이미지 복원
-            avatar.addEventListener('contextmenu', function(e) {
+            avatar.addEventListener('contextmenu', function(e) {{
                 e.preventDefault(); if (avatar.querySelector('img')) resetAvatar();
-            });
+            }});
             // 드래그 앤 드롭
-            avatar.addEventListener('dragover', function(e) {
+            avatar.addEventListener('dragover', function(e) {{
                 e.preventDefault(); avatar.classList.add('dragover');
-            });
-            avatar.addEventListener('dragleave', function() {
+            }});
+            avatar.addEventListener('dragleave', function() {{
                 avatar.classList.remove('dragover');
-            });
-            avatar.addEventListener('drop', function(e) {
+            }});
+            avatar.addEventListener('drop', function(e) {{
                 e.preventDefault(); avatar.classList.remove('dragover');
                 handleFile(e.dataTransfer.files[0]);
-            });
+            }});
         </script>
         """, height=170)
         st.divider()
@@ -877,6 +890,11 @@ def main():
             ["주문서 변환", "업체 관리", "매핑 관리", "변환 미리보기"],
             label_visibility="collapsed",
         )
+
+        # 로그아웃 버튼
+        st.divider()
+        if st.button("로그아웃", use_container_width=True):
+            logout()
 
 
     # ── 메인 콘텐츠 ──

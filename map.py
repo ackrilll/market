@@ -3,11 +3,17 @@
 
 외부 JSON 설정 파일(data/vendor_config.json)에서 업체별 매핑 정보를 로드합니다.
 새 업체 추가 시 JSON 파일만 편집하거나, CRUD 함수를 통해 동적으로 관리할 수 있습니다.
+
+유저별 설정 지원:
+  - load_user_config(user_id) 호출 시 data/users/{user_id}/vendor_config.json 로드
+  - st.session_state["user_config"] / ["user_vendor_map"]에 저장
+  - 모든 조회 함수는 유저 config 우선, 없으면 전역 _config 폴백
 """
 import json
 import os
 import logging
 import shutil
+import streamlit as st
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +22,7 @@ logger = logging.getLogger(__name__)
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _CONFIG_PATH = os.path.join(_BASE_DIR, "data", "vendor_config.json")
 _FORM_DIR = os.path.join(_BASE_DIR, "data", "target_form")
+_USERS_DIR = os.path.join(_BASE_DIR, "data", "users")
 _config = None
 _vendor_map = {}  # id -> vendor dict 빠른 조회용
 
@@ -42,24 +49,27 @@ def _load_config():
     nh_list = [v["name"] for v in _config.get("vendors", [])]
 
 
-def _save_config():
-    """현재 설정을 JSON 파일에 원자적으로 저장합니다.
+def _save_config(config=None, config_path=None):
+    """설정을 JSON 파일에 원자적으로 저장합니다.
 
-    임시 파일에 먼저 쓴 뒤 rename하여 동시 쓰기 시 파일 손상을 방지합니다.
+    Args:
+        config: 저장할 설정 dict (None이면 전역 _config)
+        config_path: 저장 경로 (None이면 전역 _CONFIG_PATH)
     """
     import tempfile
+    save_config = config if config is not None else _config
+    save_path = config_path if config_path is not None else _CONFIG_PATH
     try:
-        config_dir = os.path.dirname(_CONFIG_PATH)
+        config_dir = os.path.dirname(save_path)
         with tempfile.NamedTemporaryFile(
             mode='w', dir=config_dir, delete=False,
             suffix='.tmp', encoding='utf-8'
         ) as tmp:
-            json.dump(_config, tmp, ensure_ascii=False, indent=2)
+            json.dump(save_config, tmp, ensure_ascii=False, indent=2)
             tmp_path = tmp.name
-        shutil.move(tmp_path, _CONFIG_PATH)
+        shutil.move(tmp_path, save_path)
     except Exception as e:
         logger.error(f"설정 파일 저장 실패: {e}")
-        # 임시 파일 정리
         try:
             if 'tmp_path' in locals() and os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -85,6 +95,73 @@ def _ensure_config():
 _load_config()
 
 
+# ──────────────────────────────────── 유저별 설정 ────────────────────────────────────
+
+def _get_user_config_path(user_id):
+    """유저별 vendor_config.json 경로를 반환합니다."""
+    # Path Traversal 방지: user_id에서 위험한 문자 제거
+    safe_id = os.path.basename(user_id)
+    return os.path.join(_USERS_DIR, safe_id, "vendor_config.json")
+
+
+def load_user_config(user_id):
+    """유저별 vendor_config.json을 로드하여 session_state에 저장합니다.
+
+    파일이 없으면 빈 업체 목록으로 초기화합니다.
+    """
+    config_path = _get_user_config_path(user_id)
+
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                user_config = json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"유저 설정 로드 실패 ({user_id}): {e}")
+            user_config = _create_empty_user_config()
+    else:
+        user_config = _create_empty_user_config()
+        # 디렉토리 생성 및 파일 저장
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        _save_config(user_config, config_path)
+
+    st.session_state["user_config"] = user_config
+    st.session_state["user_vendor_map"] = {v["id"]: v for v in user_config.get("vendors", [])}
+    st.session_state["user_config_path"] = config_path
+
+
+def _create_empty_user_config():
+    """빈 업체 목록을 가진 기본 설정을 반환합니다."""
+    _ensure_config()
+    return {
+        "default_rename_map": dict(_config.get("default_rename_map", {})),
+        "default_target_columns": list(_config.get("default_target_columns", [])),
+        "vendors": [],
+    }
+
+
+def _get_current_config():
+    """현재 활성 설정을 반환합니다 (유저 config 우선, 없으면 전역 폴백)."""
+    user_config = st.session_state.get("user_config")
+    if user_config is not None:
+        return user_config
+    _ensure_config()
+    return _config
+
+
+def _get_current_vendor_map():
+    """현재 활성 vendor_map을 반환합니다."""
+    user_map = st.session_state.get("user_vendor_map")
+    if user_map is not None:
+        return user_map
+    _ensure_config()
+    return _vendor_map
+
+
+def _get_current_config_path():
+    """현재 활성 config 파일 경로를 반환합니다."""
+    return st.session_state.get("user_config_path", _CONFIG_PATH)
+
+
 # ──────────────────────────────────── 업체 리스트 ────────────────────────────────────
 
 nh_list = [v["name"] for v in _config.get("vendors", [])]
@@ -92,25 +169,26 @@ nh_list = [v["name"] for v in _config.get("vendors", [])]
 
 def get_nh_list():
     """현재 등록된 업체명 리스트를 반환합니다. (동적 갱신 지원)"""
-    _ensure_config()
-    return [v["name"] for v in _config.get("vendors", [])]
+    config = _get_current_config()
+    return [v["name"] for v in config.get("vendors", [])]
 
 
 def get_all_vendors():
     """모든 업체 설정을 리스트로 반환합니다."""
-    _ensure_config()
-    return list(_config.get("vendors", []))
+    config = _get_current_config()
+    return list(config.get("vendors", []))
 
 
 def get_vendor_by_id(vendor_id):
     """ID로 업체 설정을 조회합니다."""
-    return _vendor_map.get(vendor_id)
+    vendor_map = _get_current_vendor_map()
+    return vendor_map.get(vendor_id)
 
 
 def get_vendor_by_name(name):
     """이름으로 업체 설정을 조회합니다."""
-    _ensure_config()
-    for v in _config.get("vendors", []):
+    config = _get_current_config()
+    for v in config.get("vendors", []):
         if v["name"] == name:
             return v
     return None
@@ -120,8 +198,8 @@ def get_vendor_by_name(name):
 
 def _next_vendor_id():
     """사용 가능한 다음 업체 ID를 반환합니다."""
-    _ensure_config()
-    vendors = _config.get("vendors", [])
+    config = _get_current_config()
+    vendors = config.get("vendors", [])
     if not vendors:
         return 0
     return max(v["id"] for v in vendors) + 1
@@ -131,7 +209,7 @@ def add_vendor_to_config(name, keywords, target_columns=None, rename_map=None,
                          constant_values=None, copy_map=None, split_config=None,
                          form_file=None):
     """새 업체를 설정에 추가합니다.
-    
+
     Args:
         name: 업체명
         keywords: 분류 키워드 리스트
@@ -141,25 +219,26 @@ def add_vendor_to_config(name, keywords, target_columns=None, rename_map=None,
         copy_map: 복사 매핑 dict (None이면 빈 dict)
         split_config: 분할 설정 (None이면 없음)
         form_file: 양식 파일명 (None이면 없음)
-    
+
     Returns:
         새로 생성된 업체의 ID
-        
+
     Raises:
         ValueError: 이미 존재하는 업체명인 경우
     """
     global nh_list
-    
+
     # 중복 체크
     if get_vendor_by_name(name) is not None:
         raise ValueError(f"이미 존재하는 업체명입니다: {name}")
-    
+
+    config = _get_current_config()
     new_id = _next_vendor_id()
     vendor_data = {
         "id": new_id,
         "name": name,
         "rename_map": rename_map or {},
-        "target_columns": target_columns or list(_config.get("default_target_columns", [])),
+        "target_columns": target_columns or list(config.get("default_target_columns", [])),
         "constant_values": constant_values or {},
         "copy_map": copy_map or {},
         "split_config": split_config,
@@ -167,73 +246,95 @@ def add_vendor_to_config(name, keywords, target_columns=None, rename_map=None,
     }
     if form_file:
         vendor_data["form_file"] = form_file
-    
-    _config["vendors"].append(vendor_data)
-    _vendor_map[new_id] = vendor_data
-    nh_list = [v["name"] for v in _config.get("vendors", [])]
-    _save_config()
-    
+
+    config["vendors"].append(vendor_data)
+
+    # vendor_map 갱신
+    vendor_map = _get_current_vendor_map()
+    vendor_map[new_id] = vendor_data
+
+    # session_state 갱신
+    if "user_config" in st.session_state:
+        st.session_state["user_config"] = config
+        st.session_state["user_vendor_map"] = vendor_map
+
+    nh_list = [v["name"] for v in config.get("vendors", [])]
+    _save_config(config, _get_current_config_path())
+
     return new_id
 
 
 def remove_vendor_from_config(vendor_id):
     """업체를 설정에서 삭제합니다.
-    
+
     Args:
         vendor_id: 삭제할 업체 ID
-        
+
     Raises:
         ValueError: 존재하지 않는 업체 ID인 경우
     """
     global nh_list
-    
-    if vendor_id not in _vendor_map:
+
+    vendor_map = _get_current_vendor_map()
+    if vendor_id not in vendor_map:
         raise ValueError(f"존재하지 않는 업체 ID입니다: {vendor_id}")
-    
-    _config["vendors"] = [v for v in _config["vendors"] if v["id"] != vendor_id]
-    del _vendor_map[vendor_id]
-    nh_list = [v["name"] for v in _config.get("vendors", [])]
-    _save_config()
+
+    config = _get_current_config()
+    config["vendors"] = [v for v in config["vendors"] if v["id"] != vendor_id]
+    del vendor_map[vendor_id]
+
+    if "user_config" in st.session_state:
+        st.session_state["user_config"] = config
+        st.session_state["user_vendor_map"] = vendor_map
+
+    nh_list = [v["name"] for v in config.get("vendors", [])]
+    _save_config(config, _get_current_config_path())
 
 
 def update_vendor_in_config(vendor_id, updates):
     """업체 설정을 부분 수정합니다.
-    
+
     Args:
         vendor_id: 수정할 업체 ID
         updates: 수정할 필드 dict (예: {"rename_map": {...}, "target_columns": [...]})
-        
+
     Raises:
         ValueError: 존재하지 않는 업체 ID인 경우
     """
     global nh_list
-    
-    vendor = _vendor_map.get(vendor_id)
+
+    vendor_map = _get_current_vendor_map()
+    vendor = vendor_map.get(vendor_id)
     if vendor is None:
         raise ValueError(f"존재하지 않는 업체 ID입니다: {vendor_id}")
-    
+
     # id는 수정 불가
     updates.pop("id", None)
-    
+
     vendor.update(updates)
-    
+
+    config = _get_current_config()
     # vendors 리스트도 갱신
-    for i, v in enumerate(_config["vendors"]):
+    for i, v in enumerate(config["vendors"]):
         if v["id"] == vendor_id:
-            _config["vendors"][i] = vendor
+            config["vendors"][i] = vendor
             break
-    
-    nh_list = [v["name"] for v in _config.get("vendors", [])]
-    _save_config()
+
+    if "user_config" in st.session_state:
+        st.session_state["user_config"] = config
+        st.session_state["user_vendor_map"] = vendor_map
+
+    nh_list = [v["name"] for v in config.get("vendors", [])]
+    _save_config(config, _get_current_config_path())
 
 
 def update_vendor_keywords(vendor_id, keywords):
     """업체의 키워드를 수정합니다.
-    
+
     Args:
         vendor_id: 업체 ID
         keywords: 새 키워드 리스트
-        
+
     Raises:
         ValueError: 존재하지 않는 업체 ID이거나, 빈 키워드 리스트인 경우
     """
@@ -246,8 +347,8 @@ def update_vendor_keywords(vendor_id, keywords):
 
 def _get_vendor(idx):
     """인덱스로 업체 설정을 조회합니다."""
-    _ensure_config()
-    return _vendor_map.get(idx)
+    vendor_map = _get_current_vendor_map()
+    return vendor_map.get(idx)
 
 
 def get_ganghwagun_rename_map(idx):
@@ -256,8 +357,8 @@ def get_ganghwagun_rename_map(idx):
     if vendor is not None:
         return dict(vendor.get("rename_map", {}))
     # 등록되지 않은 인덱스 → 기본 매핑
-    _ensure_config()
-    return dict(_config.get("default_rename_map", {}))
+    config = _get_current_config()
+    return dict(config.get("default_rename_map", {}))
 
 
 def get_copy_map(idx):
@@ -270,7 +371,6 @@ def get_copy_map(idx):
 
 def get_date_map(idx, formatted_date):
     """날짜 관련 고정값 매핑 (필요시)"""
-    # 현재는 idx 24(청수굴비)만 날짜 매핑이 필요
     vendor = _get_vendor(idx)
     if vendor and vendor.get("split_config"):
         return {"날짜": formatted_date}
@@ -282,8 +382,8 @@ def get_ganghwagun_target_columns(idx):
     vendor = _get_vendor(idx)
     if vendor is not None:
         return list(vendor.get("target_columns", []))
-    _ensure_config()
-    return list(_config.get("default_target_columns", []))
+    config = _get_current_config()
+    return list(config.get("default_target_columns", []))
 
 
 def get_constant_values(idx):
@@ -312,14 +412,14 @@ _DEFAULT_CLASSIFICATION_COLUMN = "상품약어"
 
 def _get_classification_column():
     """mapping_config.json에서 분류 기준 칼럼을 조회합니다.
-    
+
     여러 source_type 중 classification_column이 설정된 첫 번째 값을 반환합니다.
     설정이 없으면 기본값 '상품약어'를 반환합니다.
     """
     try:
         with open(_MAPPING_CONFIG_PATH, "r", encoding="utf-8") as f:
             mapping_config = json.load(f)
-        
+
         source_types = mapping_config.get("source_types", {})
         for source_name, source_config in source_types.items():
             col = source_config.get("classification_column", "")
@@ -327,21 +427,21 @@ def _get_classification_column():
                 return col
     except (FileNotFoundError, json.JSONDecodeError):
         pass
-    
+
     return _DEFAULT_CLASSIFICATION_COLUMN
 
 
 def sort_data(df):
     """분류 기준 칼럼의 키워드를 기반으로 업체별 ID를 부여하고 리스트로 반환.
-    
+
     분류 기준 칼럼은 mapping_config.json의 classification_column 설정을 따르며,
     설정이 없으면 기본값 '상품약어'를 사용합니다.
     """
     current_nh_list = get_nh_list()
-    
+
     # 0. 분류 기준 칼럼 결정
     classification_col = _get_classification_column()
-    
+
     # 분류 기준 칼럼이 DataFrame에 존재하는지 확인
     if classification_col not in df.columns:
         logger.warning(
@@ -352,7 +452,7 @@ def sort_data(df):
         if classification_col not in df.columns:
             logger.error(f"기본 분류 칼럼 '{classification_col}'도 데이터에 없습니다. 분류를 수행할 수 없습니다.")
             return []
-    
+
     # 1. 초기화
     df['nh_id'] = -1
 
