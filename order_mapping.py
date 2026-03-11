@@ -268,16 +268,21 @@ def _build_unified_mapping_table(vendor):
         if col_str in reverse_rename:
             src = reverse_rename[col_str]
             if src == col_str:
-                mapping_desc = f"{src} (동일)"
+                source_col = src
+                vendor_col = f"{col_str} (동일)"
             else:
-                mapping_desc = src
+                source_col = src
+                vendor_col = col_str
         elif col_str in constant_values:
-            mapping_desc = f'고정값: "{constant_values[col_str]}"'
+            source_col = ""
+            vendor_col = f'{col_str} (고정값: "{constant_values[col_str]}")'
         elif col_str in reverse_copy:
-            mapping_desc = f"복사: {reverse_copy[col_str]}"
+            source_col = reverse_copy[col_str]
+            vendor_col = f"{col_str} (복사)"
         else:
-            mapping_desc = f"{col_str} (동일)"
-        rows.append({"원본 칼럼": mapping_desc, "업체 칼럼": col_str})
+            source_col = col_str
+            vendor_col = f"{col_str} (동일)"
+        rows.append({"원본 칼럼": source_col, "업체 칼럼": vendor_col})
     return rows
 
 
