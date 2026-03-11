@@ -155,7 +155,7 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 양식 파일 자동 다운로드 처리 ──
+    # ── 양식 파일 다운로드 처리 ──
     if "_vendor_dl_file" in st.session_state:
         dl_file = st.session_state.pop("_vendor_dl_file")
         filepath = _get_form_file_path(dl_file)
@@ -166,10 +166,6 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
-            # 다운로드 버튼을 숨긴 채 렌더링 (자동 클릭용)
-            st.markdown("""<style>
-            div[data-testid="stDownloadButton"] { position:absolute; opacity:0; pointer-events:none; }
-            </style>""", unsafe_allow_html=True)
             st.download_button(
                 label=f"{dl_file} 다운로드",
                 data=file_bytes,
@@ -177,21 +173,8 @@ def render_vendor_tab():
                 mime=mime,
                 key="dl_form_auto",
                 type="primary",
+                use_container_width=True,
             )
-            # 자동 클릭으로 즉시 다운로드 트리거
-            stc.html("""
-            <script>
-            setTimeout(function() {
-                var btns = window.parent.document.querySelectorAll('button[data-testid="stBaseButton-primary"]');
-                for (var i = 0; i < btns.length; i++) {
-                    if (btns[i].textContent.indexOf('다운로드') > -1) {
-                        btns[i].click();
-                        break;
-                    }
-                }
-            }, 300);
-            </script>
-            """, height=0)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
