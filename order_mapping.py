@@ -267,28 +267,31 @@ def _render_mapping_view(vendor):
     copy_map = vendor.get("copy_map", {})
     target_columns = vendor.get("target_columns", [])
 
-    # 칼럼 매핑 테이블
+    # 대상 칼럼 (항상 표시)
+    if target_columns:
+        st.markdown("#### 대상 칼럼")
+        col_rows = [{"순서": i + 1, "칼럼명": str(c)} for i, c in enumerate(target_columns)]
+        st.dataframe(pd.DataFrame(col_rows), use_container_width=True, hide_index=True)
+
+    # 칼럼 매핑
+    st.markdown("#### 칼럼 매핑")
     if rename_map:
-        st.markdown("#### 칼럼 매핑")
         map_rows = [{"원본 칼럼": src, "→": "→", "업체 칼럼": dst} for src, dst in rename_map.items()]
         st.dataframe(pd.DataFrame(map_rows), use_container_width=True, hide_index=True)
+    else:
+        st.caption("원본 칼럼명을 그대로 사용합니다.")
 
-    # 고정값 테이블
+    # 고정값
     if constant_values:
         st.markdown("#### 고정값")
         const_rows = [{"업체 칼럼": col, "고정값": val} for col, val in constant_values.items()]
         st.dataframe(pd.DataFrame(const_rows), use_container_width=True, hide_index=True)
 
-    # 칼럼 복사 테이블
+    # 칼럼 복사
     if copy_map:
-        st.markdown("#### 칼럼 복사 (copy_map)")
+        st.markdown("#### 칼럼 복사")
         copy_rows = [{"원본 칼럼": src, "→": "→", "복사 대상": dst} for src, dst in copy_map.items()]
         st.dataframe(pd.DataFrame(copy_rows), use_container_width=True, hide_index=True)
-
-    # 대상 칼럼 순서
-    if target_columns:
-        st.markdown("#### 대상 칼럼 순서")
-        st.caption(", ".join(str(c) for c in target_columns))
 
     # 버튼: 수정 / 초기화
     st.divider()
