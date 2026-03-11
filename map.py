@@ -13,7 +13,6 @@ import json
 import os
 import logging
 import shutil
-import streamlit as st
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +108,7 @@ def load_user_config(user_id):
 
     파일이 없으면 빈 업체 목록으로 초기화합니다.
     """
+    import streamlit as st
     config_path = _get_user_config_path(user_id)
 
     if os.path.exists(config_path):
@@ -141,6 +141,7 @@ def _create_empty_user_config():
 
 def _get_current_config():
     """현재 활성 설정을 반환합니다 (유저 config 우선, 없으면 전역 폴백)."""
+    import streamlit as st
     user_config = st.session_state.get("user_config")
     if user_config is not None:
         return user_config
@@ -150,6 +151,7 @@ def _get_current_config():
 
 def _get_current_vendor_map():
     """현재 활성 vendor_map을 반환합니다."""
+    import streamlit as st
     user_map = st.session_state.get("user_vendor_map")
     if user_map is not None:
         return user_map
@@ -159,6 +161,7 @@ def _get_current_vendor_map():
 
 def _get_current_config_path():
     """현재 활성 config 파일 경로를 반환합니다."""
+    import streamlit as st
     return st.session_state.get("user_config_path", _CONFIG_PATH)
 
 
@@ -254,6 +257,7 @@ def add_vendor_to_config(name, keywords, target_columns=None, rename_map=None,
     vendor_map[new_id] = vendor_data
 
     # session_state 갱신
+    import streamlit as st
     if "user_config" in st.session_state:
         st.session_state["user_config"] = config
         st.session_state["user_vendor_map"] = vendor_map
@@ -283,6 +287,7 @@ def remove_vendor_from_config(vendor_id):
     config["vendors"] = [v for v in config["vendors"] if v["id"] != vendor_id]
     del vendor_map[vendor_id]
 
+    import streamlit as st
     if "user_config" in st.session_state:
         st.session_state["user_config"] = config
         st.session_state["user_vendor_map"] = vendor_map
@@ -320,6 +325,7 @@ def update_vendor_in_config(vendor_id, updates):
             config["vendors"][i] = vendor
             break
 
+    import streamlit as st
     if "user_config" in st.session_state:
         st.session_state["user_config"] = config
         st.session_state["user_vendor_map"] = vendor_map
