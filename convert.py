@@ -3,7 +3,6 @@ import streamlit as st
 import io
 import zipfile
 import re
-import os
 from map import (
     get_ganghwagun_rename_map,
     get_ganghwagun_target_columns,
@@ -515,13 +514,7 @@ def render_convert_tab():
 
         # ── 변환 실행 ──
         if st.button(" 변환 및 압축파일 생성", type="primary", use_container_width=True):
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            OUTPUT_DIR = os.path.join(BASE_DIR, "data", "converted")
             try:
-                # 출력 디렉토리 생성
-                if not os.path.exists(OUTPUT_DIR):
-                    os.makedirs(OUTPUT_DIR)
-
                 raw_df = pd.read_excel(uploaded_file)
                 
                 # 1. 원본 데이터 분류
@@ -546,8 +539,6 @@ def render_convert_tab():
                         sort_info_bytes = create_sort_info_file(raw_df)
                         sort_info_filename = f"00_원본파일_분류정보_{formatted_date}.xlsx"
                         zip_file.writestr(sort_info_filename, sort_info_bytes)
-                        with open(os.path.join(OUTPUT_DIR, sort_info_filename), "wb") as f:
-                            f.write(sort_info_bytes)
                     except Exception as e:
                         st.warning(f" 분류 정보 파일 생성 실패 (변환은 계속됩니다): {e}")
 
@@ -625,29 +616,21 @@ def render_convert_tab():
                                 delivery_bytes = create_excel_buffer(df_delivery, company_name)
                                 delivery_filename = f"{idx}_{company_name}_롯데출력창.xlsx"
                                 zip_file.writestr(delivery_filename, delivery_bytes)
-                                with open(os.path.join(OUTPUT_DIR, delivery_filename), "wb") as f:
-                                    f.write(delivery_bytes)
                                 
                                 df_settlement = full_df.loc[:, start_b:].copy()
                                 settlement_bytes = create_excel_buffer(df_settlement, company_name)
                                 settlement_filename = f"{idx}_{company_name}_메일양식.xlsx"
                                 zip_file.writestr(settlement_filename, settlement_bytes)
-                                with open(os.path.join(OUTPUT_DIR, settlement_filename), "wb") as f:
-                                    f.write(settlement_bytes)
                             else:
                                 normal_bytes = create_excel_buffer(full_df, company_name)
                                 normal_filename = f"{idx}_{company_name}_양식.xlsx"
                                 zip_file.writestr(normal_filename, normal_bytes)
-                                with open(os.path.join(OUTPUT_DIR, normal_filename), "wb") as f:
-                                    f.write(normal_bytes)
                                 
                                 # 동송농협(id=23): 텍스트 파일 추가 생성
                                 if idx == 23:
                                     txt_bytes = create_text_buffer(full_df)
                                     txt_filename = f"{idx}_{company_name}_양식.txt"
                                     zip_file.writestr(txt_filename, txt_bytes)
-                                    with open(os.path.join(OUTPUT_DIR, txt_filename), "wb") as f:
-                                        f.write(txt_bytes)
                             
                             processed_files_count += 1
                             total_orders_processed += len(full_df)
@@ -708,7 +691,7 @@ def render_convert_tab():
                             type="primary"
                         )
                     with dl_col2:
-                        st.caption(f" 로컬 저장 완료\n\n`{OUTPUT_DIR}`")
+                        st.caption(" ZIP 파일을 다운로드하세요.")
                     st.balloons()
                 else:
                     st.info(" 생성된 파일이 없습니다. (선택된 업체에 데이터가 없습니다)")

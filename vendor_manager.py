@@ -249,4 +249,5 @@ def render_vendor_tab():
 
         if changes_applied:
             reload_config()
+            st.warning("⚠️ 변경 사항은 현재 세션에서만 유효합니다. 앱 재시작 시 초기 설정으로 복원됩니다.")
             st.rerun()

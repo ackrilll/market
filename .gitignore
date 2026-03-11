@@ -26,3 +26,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Data (runtime files)
+data/converted/
+data/raw/

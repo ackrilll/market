@@ -209,6 +209,7 @@ def _render_classification_mode(source_name, source_columns):
             mapping_config["source_types"][source_name]["classification_column"] = selected_col
             _save_mapping_config(mapping_config)
             st.success(f" '{source_name}'의 분류 기준 칼럼이 '{selected_col}'로 저장되었습니다.")
+            st.warning("⚠️ 변경 사항은 현재 세션에서만 유효합니다. 앱 재시작 시 초기 설정으로 복원됩니다.")
     else:
         st.info(" 위에서 칼럼을 클릭하여 분류 기준을 선택하세요.")
 
@@ -359,6 +360,7 @@ def _render_mapping_mode(source_name, source_columns, vendor_name, vendor, vendo
                 total = len(current_mapping) + len(current_constant_values)
                 st.success(f" '{source_name}' → '{vendor_name}' 매핑이 저장되었습니다! "
                            f"(칼럼 매핑 {len(current_mapping)}개, 고정값 {len(current_constant_values)}개)")
+                st.warning("⚠️ 변경 사항은 현재 세션에서만 유효합니다. 앱 재시작 시 초기 설정으로 복원됩니다.")
 
         with save_col2:
             if st.button(" 초기화", key="reset_mapping", use_container_width=True):
