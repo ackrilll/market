@@ -207,7 +207,7 @@ def _render_vendor_list_and_detail(vendors):
 
     selected_vendor_id = st.session_state["selected_mapping_vendor"]
 
-    # ── 업체 목록 (세로 나열) ──
+    # ── 업체 목록 + 선택된 업체 아래에 상세 패널 인라인 표시 ──
     for vendor in vendors:
         has_mapping, mapping_count = _get_mapping_status(vendor)
         is_selected = (vendor["id"] == selected_vendor_id)
@@ -228,7 +228,6 @@ def _render_vendor_list_and_detail(vendors):
             type=btn_type,
             use_container_width=True,
         ):
-            # 같은 업체 다시 클릭하면 접기
             if is_selected:
                 st.session_state["selected_mapping_vendor"] = None
                 st.session_state["mapping_edit_mode"] = False
@@ -237,24 +236,15 @@ def _render_vendor_list_and_detail(vendors):
                 st.session_state["mapping_edit_mode"] = False
             st.rerun()
 
-    # ── 상세 패널 ──
-    if selected_vendor_id is not None:
-        vendor = get_vendor_by_id(selected_vendor_id)
-        if vendor is None:
-            st.warning("선택된 업체를 찾을 수 없습니다.")
-            st.session_state["selected_mapping_vendor"] = None
-            return
-
-        st.divider()
-        st.markdown(f"### {vendor['name']} 매핑 상세")
-
-        has_mapping, _ = _get_mapping_status(vendor)
-        edit_mode = st.session_state.get("mapping_edit_mode", False)
-
-        if has_mapping and not edit_mode:
-            _render_mapping_view(vendor)
-        else:
-            _render_mapping_editor(vendor)
+        # ── 선택된 업체 바로 아래에 상세 패널 표시 ──
+        if is_selected:
+            with st.container(border=True):
+                st.markdown(f"#### {vendor['name']} 매핑 상세")
+                edit_mode = st.session_state.get("mapping_edit_mode", False)
+                if has_mapping and not edit_mode:
+                    _render_mapping_view(vendor)
+                else:
+                    _render_mapping_editor(vendor)
 
 
 # ────────────────────────────── 매핑 정보 조회 패널 ──────────────────────────────
