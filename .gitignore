@@ -30,6 +30,9 @@ Thumbs.db
 # Data (runtime files - 개인정보 포함)
 data/converted/
 data/raw/
+data/users/
+data/vendor_config.json
+data/mapping_config.json
 
 # Test data (개인정보 포함)
 user_test/

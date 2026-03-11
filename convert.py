@@ -551,7 +551,7 @@ def render_convert_tab():
                         sort_info_filename = f"00_원본파일_분류정보_{formatted_date}.xlsx"
                         zip_file.writestr(sort_info_filename, sort_info_bytes)
                     except Exception as e:
-                        st.warning(f" 분류 정보 파일 생성 실패 (변환은 계속됩니다): {e}")
+                        st.warning("분류 정보 파일 생성에 실패했습니다 (변환은 계속됩니다).")
 
                     for step_idx, (idx, company_name, sorted_data) in enumerate(sorted_data_list):
                         # 프로그레스 바 업데이트

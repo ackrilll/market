@@ -110,7 +110,7 @@ def _read_form_columns(uploaded_file):
         df = pd.read_excel(uploaded_file, nrows=5)
         return list(df.columns), df
     except Exception as e:
-        st.error(f"양식 파일 읽기 실패: {e}")
+        st.error("양식 파일 읽기에 실패했습니다.")
         return [], pd.DataFrame()
 
 
@@ -166,15 +166,18 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
+            import json as _json
             b64 = base64.b64encode(file_bytes).decode()
+            safe_filename = _json.dumps(dl_file)
+            safe_mime = _json.dumps(mime)
             stc.html(f"""<script>
             var b = atob("{b64}");
             var a = new Uint8Array(b.length);
             for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
-            var blob = new Blob([a], {{type: "{mime}"}});
+            var blob = new Blob([a], {{type: {safe_mime}}});
             var url = URL.createObjectURL(blob);
             var el = document.createElement("a");
-            el.href = url; el.download = "{dl_file}"; el.click();
+            el.href = url; el.download = {safe_filename}; el.click();
             URL.revokeObjectURL(url);
             </script>""", height=0)
 
@@ -203,7 +206,7 @@ def render_vendor_tab():
             except ValueError:
                 pass  # 이미 삭제된 ID — 무시
             except Exception as e:
-                st.error(f"삭제 실패: {e}")
+                st.error("업체 삭제에 실패했습니다.")
 
         # 2) 행 데이터 처리 (수정/추가/파일 업로드)
         result_rows = result.get("rows", [])
@@ -245,7 +248,7 @@ def render_vendor_tab():
                 except ValueError:
                     pass  # 이미 존재하는 업체 — 무시
                 except Exception as e:
-                    st.error(f"'{name}' 추가 실패: {e}")
+                    st.error(f"'{name}' 추가에 실패했습니다.")
                 continue
 
             # 기존 업체 수정
@@ -274,7 +277,7 @@ def render_vendor_tab():
                         if cols:
                             updates["target_columns"] = cols
                     except Exception as e:
-                        st.error(f"파일 저장 실패: {e}")
+                        st.error("파일 저장에 실패했습니다.")
 
                 # 파일 제거 처리
                 file_removed = row.get("_file_removed", False)
@@ -286,7 +289,7 @@ def render_vendor_tab():
                         update_vendor_in_config(row_id, updates)
                         changes_applied = True
                     except Exception as e:
-                        st.error(f"수정 실패: {e}")
+                        st.error("업체 정보 수정에 실패했습니다.")
 
         if changes_applied:
             reload_config()

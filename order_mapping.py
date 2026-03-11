@@ -140,7 +140,7 @@ def _render_classification_section():
             source_df = pd.read_excel(source_file, nrows=5)
             source_columns = list(source_df.columns)
         except Exception as e:
-            st.error(f"파일 읽기 실패: {e}")
+            st.error("파일 읽기에 실패했습니다. 올바른 Excel 파일인지 확인하세요.")
             return
 
         source_name = st.text_input(
@@ -287,7 +287,7 @@ def _render_mapping_view(vendor):
             known_sources.update(file_columns)
             source_name = os.path.splitext(source_file.name)[0]
         except Exception as e:
-            st.error(f"파일 읽기 실패: {e}")
+            st.error("파일 읽기에 실패했습니다. 올바른 Excel 파일인지 확인하세요.")
 
     src_options = [_SPECIAL_UNMAPPED] + sorted(known_sources) + [_SPECIAL_CONSTANT, _SPECIAL_COPY]
 

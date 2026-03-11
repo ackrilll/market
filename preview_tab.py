@@ -97,7 +97,7 @@ def render_preview_tab():
         uploaded_file.seek(0)
         raw_df = pd.read_excel(uploaded_file)
     except Exception as e:
-        st.error(f" 파일 읽기 실패: {e}")
+        st.error("파일 읽기에 실패했습니다. 올바른 Excel 파일인지 확인하세요.")
         return
 
     st.success(f" 파일 로드 완료 — {len(raw_df)}행 × {len(raw_df.columns)}열")
@@ -109,7 +109,7 @@ def render_preview_tab():
     try:
         sorted_data_list = sort_data(raw_df.copy())
     except Exception as e:
-        st.error(f" 분류 실패: {e}")
+        st.error("데이터 분류에 실패했습니다. 분류 기준 설정을 확인하세요.")
         return
 
     if not sorted_data_list:
@@ -156,7 +156,7 @@ def render_preview_tab():
         converted_df = _apply_conversion_pipeline(vendor_df, vendor_id, vendor_name)
     except Exception as e:
         with col_after:
-            st.error(f" 변환 실패: {e}")
+            st.error("변환에 실패했습니다. 매핑 설정을 확인하세요.")
         return
 
     with col_after:

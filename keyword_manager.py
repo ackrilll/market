@@ -102,7 +102,7 @@ def render_keyword_tab():
                     st.success(f" **{selected_name}**의 키워드가 저장되었습니다. ({len(new_keywords)}개)")
                     st.rerun()
                 except Exception as e:
-                    st.error(f" 저장 실패: {e}")
+                    st.error("저장에 실패했습니다.")
 
     with reset_col:
         if st.button("↩ 초기화", use_container_width=True, key=f"kw_reset_{vendor_id}"):
