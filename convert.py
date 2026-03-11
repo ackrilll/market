@@ -153,12 +153,17 @@ def inject_custom_css():
         align-items: center;
         gap: 6px;
     }
-    .top-header-user a {
-        color: #aaa !important;
-        text-decoration: none;
+    .top-header-logout {
+        color: #000;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 12px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        transition: color 0.2s;
     }
-    .top-header-user a:hover {
-        color: #fff !important;
+    .top-header-logout:hover {
+        color: #ff4444;
     }
     /* 메인 콘텐츠 상단 여백 */
     .stMainBlockContainer {
@@ -743,8 +748,16 @@ def main():
             header.id = 'custom-top-header';
             header.className = 'top-header-bar';
             header.innerHTML = '<span class="top-header-title">주문서 변환 시스템</span>' +
-                '<span class="top-header-user">{display_name} 님</span>';
+                '<span class="top-header-user">{display_name} 님' +
+                '<span class="top-header-logout" id="header-logout-btn">로그아웃</span></span>';
             parent.body.appendChild(header);
+            // 로그아웃 클릭 이벤트
+            parent.getElementById('header-logout-btn').addEventListener('click', function() {{
+                var bs = parent.querySelectorAll('button');
+                for (var i = 0; i < bs.length; i++) {{
+                    if (bs[i].textContent.trim() === '로그아웃') {{ bs[i].click(); break; }}
+                }}
+            }});
             // 사이드바 접기 버튼 제거
             function removeCollapseBtn() {{
                 var btns = parent.querySelectorAll(
@@ -891,10 +904,11 @@ def main():
             label_visibility="collapsed",
         )
 
-        # 로그아웃 버튼
-        st.divider()
-        if st.button("로그아웃", use_container_width=True):
+        # 로그아웃 버튼 (숨김 — 상단 헤더에서 JS로 트리거)
+        st.markdown('<div style="display:none">', unsafe_allow_html=True)
+        if st.button("로그아웃", key="logout_btn_hidden"):
             logout()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
     # ── 메인 콘텐츠 ──
