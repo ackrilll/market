@@ -278,16 +278,16 @@ def _build_unified_mapping_table(vendor):
         if col_str in reverse_rename:
             src = reverse_rename[col_str]
             if src == col_str:
-                mapping_desc = f"← {src} (동일)"
+                mapping_desc = f"{src} (동일)"
             else:
-                mapping_desc = f"← {src}"
+                mapping_desc = src
         elif col_str in constant_values:
             mapping_desc = f'고정값: "{constant_values[col_str]}"'
         elif col_str in reverse_copy:
             mapping_desc = f"복사: {reverse_copy[col_str]}"
         else:
-            mapping_desc = f"← {col_str} (동일)"
-        rows.append({"업체 칼럼": col_str, "매핑": mapping_desc})
+            mapping_desc = f"{col_str} (동일)"
+        rows.append({"업체 칼럼": col_str, "원본 칼럼": mapping_desc})
     return rows
 
 
