@@ -61,11 +61,19 @@ def _load_vendor_form(vendor_name):
 
 
 def _get_mapping_status(vendor):
-    """업체의 매핑 상태를 판단합니다."""
+    """업체의 매핑 상태를 판단합니다.
+
+    rename_map, constant_values, copy_map, target_columns 중 하나라도 있으면 매핑 완료.
+    """
     rename_map = vendor.get("rename_map", {})
     constant_values = vendor.get("constant_values", {})
-    has_mapping = bool(rename_map) or bool(constant_values)
-    mapping_count = len(rename_map) + len(constant_values)
+    copy_map = vendor.get("copy_map", {})
+    target_columns = vendor.get("target_columns", [])
+
+    has_mapping = bool(rename_map) or bool(constant_values) or bool(copy_map) or bool(target_columns)
+    mapping_count = len(rename_map) + len(constant_values) + len(copy_map)
+    if not mapping_count and target_columns:
+        mapping_count = len(target_columns)
     return has_mapping, mapping_count
 
 
