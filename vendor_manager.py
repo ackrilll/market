@@ -155,7 +155,7 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 양식 파일 다운로드 처리 ──
+    # ── 양식 파일 즉시 다운로드 처리 ──
     if "_vendor_dl_file" in st.session_state:
         dl_file = st.session_state.pop("_vendor_dl_file")
         filepath = _get_form_file_path(dl_file)
@@ -166,15 +166,17 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
-            st.download_button(
-                label=f"{dl_file} 다운로드",
-                data=file_bytes,
-                file_name=dl_file,
-                mime=mime,
-                key="dl_form_auto",
-                type="primary",
-                use_container_width=True,
-            )
+            b64 = base64.b64encode(file_bytes).decode()
+            stc.html(f"""<script>
+            var b = atob("{b64}");
+            var a = new Uint8Array(b.length);
+            for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+            var blob = new Blob([a], {{type: "{mime}"}});
+            var url = URL.createObjectURL(blob);
+            var el = document.createElement("a");
+            el.href = url; el.download = "{dl_file}"; el.click();
+            URL.revokeObjectURL(url);
+            </script>""", height=0)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
