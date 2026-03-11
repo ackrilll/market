@@ -3,6 +3,10 @@ import streamlit as st
 import io
 import zipfile
 import re
+import html
+import logging
+
+logger = logging.getLogger(__name__)
 from map import (
     get_ganghwagun_rename_map,
     get_ganghwagun_target_columns,
@@ -449,8 +453,8 @@ def render_convert_tab():
         
         st.markdown(f"""
         <div class="file-info-card">
-             <strong>{file_name_str}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
-             날짜: <strong>{formatted_date}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
+             <strong>{html.escape(file_name_str)}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
+             날짜: <strong>{html.escape(formatted_date)}</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
              주문 <strong>{len(raw_df_preview):,}건</strong>&nbsp;&nbsp;│&nbsp;&nbsp;
              컬럼 <strong>{len(raw_df_preview.columns)}개</strong>
         </div>
@@ -697,8 +701,8 @@ def render_convert_tab():
                     st.info(" 생성된 파일이 없습니다. (선택된 업체에 데이터가 없습니다)")
 
             except Exception as e:
-                st.error(f"치명적 오류 발생: {e}")
-                st.exception(e)
+                logger.exception("변환 중 치명적 오류 발생")
+                st.error("처리 중 오류가 발생했습니다. 파일을 확인해 주세요.")
 
 
 # ──────────────────────────────────── 메인 앱 ────────────────────────────────────

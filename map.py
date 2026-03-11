@@ -43,12 +43,28 @@ def _load_config():
 
 
 def _save_config():
-    """현재 설정을 JSON 파일에 저장합니다."""
+    """현재 설정을 JSON 파일에 원자적으로 저장합니다.
+
+    임시 파일에 먼저 쓴 뒤 rename하여 동시 쓰기 시 파일 손상을 방지합니다.
+    """
+    import tempfile
     try:
-        with open(_CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(_config, f, ensure_ascii=False, indent=2)
+        config_dir = os.path.dirname(_CONFIG_PATH)
+        with tempfile.NamedTemporaryFile(
+            mode='w', dir=config_dir, delete=False,
+            suffix='.tmp', encoding='utf-8'
+        ) as tmp:
+            json.dump(_config, tmp, ensure_ascii=False, indent=2)
+            tmp_path = tmp.name
+        shutil.move(tmp_path, _CONFIG_PATH)
     except Exception as e:
         logger.error(f"설정 파일 저장 실패: {e}")
+        # 임시 파일 정리
+        try:
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except OSError:
+            pass
         raise
 
 

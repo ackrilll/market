@@ -8,7 +8,16 @@ import pandas as pd
 import os
 import base64
 import io
+import re
+import logging
 import streamlit.components.v1 as stc
+
+logger = logging.getLogger(__name__)
+
+# ── 보안 상수 ──
+_ALLOWED_EXTENSIONS = {'.xlsx', '.xls'}
+_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+_MAX_VENDOR_NAME_LENGTH = 100
 from map import (
     get_all_vendors,
     get_vendor_by_name,
@@ -21,12 +30,51 @@ from map import (
 from components.vendor_table import vendor_table
 
 
+def _validate_vendor_name(name):
+    """업체명을 검증하고 안전한 문자열로 반환합니다."""
+    if not name or len(name.strip()) < 1:
+        return None
+    if len(name) > _MAX_VENDOR_NAME_LENGTH:
+        return None
+    # 위험 문자 제거 (XSS, 코드 삽입 방지)
+    sanitized = re.sub(r'[<>"\';\\]', '', name).strip()
+    return sanitized if sanitized else None
+
+
+def _validate_file_upload(file_bytes, original_filename):
+    """업로드된 파일의 크기, 확장자, 내용을 검증합니다."""
+    # 1. 파일 크기 검증
+    if len(file_bytes) > _MAX_FILE_SIZE:
+        raise ValueError("파일 크기가 10MB를 초과합니다")
+    # 2. 확장자 화이트리스트 검증
+    ext = os.path.splitext(original_filename)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise ValueError(f"허용되지 않는 파일 형식: {ext}")
+    # 3. 파일 내용이 실제 Excel인지 검증
+    try:
+        pd.read_excel(io.BytesIO(file_bytes), nrows=0)
+    except Exception:
+        raise ValueError("유효한 Excel 파일이 아닙니다")
+
+
 def _save_form_file_from_bytes(file_bytes, vendor_name, original_filename):
     """바이트 데이터로부터 양식 파일을 data/target_form/에 저장합니다."""
+    # 파일 검증
+    _validate_file_upload(file_bytes, original_filename)
+
     os.makedirs(_FORM_DIR, exist_ok=True)
-    ext = os.path.splitext(original_filename)[1]
-    filename = f"{vendor_name}{ext}"
+    ext = os.path.splitext(original_filename)[1].lower()
+    # 안전한 파일명 생성
+    safe_name = re.sub(r'[^\w\s\-()]', '', vendor_name).strip()
+    if not safe_name:
+        raise ValueError("유효하지 않은 업체명입니다")
+    filename = f"{safe_name}{ext}"
     filepath = os.path.join(_FORM_DIR, filename)
+
+    # Path traversal 방어
+    if not os.path.realpath(filepath).startswith(os.path.realpath(_FORM_DIR)):
+        raise ValueError("잘못된 파일 경로입니다")
+
     import time
     for attempt in range(3):
         try:
@@ -51,13 +99,8 @@ def _read_form_columns_from_bytes(file_bytes):
 
 def _save_form_file(uploaded_file, vendor_name):
     """업로드된 양식 파일을 data/target_form/에 저장합니다."""
-    os.makedirs(_FORM_DIR, exist_ok=True)
-    ext = os.path.splitext(uploaded_file.name)[1]
-    filename = f"{vendor_name}{ext}"
-    filepath = os.path.join(_FORM_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    return filename
+    file_bytes = uploaded_file.getbuffer().tobytes()
+    return _save_form_file_from_bytes(file_bytes, vendor_name, uploaded_file.name)
 
 
 def _read_form_columns(uploaded_file):
@@ -88,7 +131,15 @@ def _get_form_file_path(form_filename):
     """양식 파일의 전체 경로를 반환합니다."""
     if not form_filename:
         return None
+    # Path traversal 방어: 경로 구분자 및 상위 디렉토리 참조 차단
+    if '/' in form_filename or '\\' in form_filename or '..' in form_filename:
+        logger.warning(f"Path traversal 시도 차단: {form_filename}")
+        return None
     filepath = os.path.join(_FORM_DIR, form_filename)
+    # 실제 경로가 _FORM_DIR 내부인지 검증
+    if not os.path.realpath(filepath).startswith(os.path.realpath(_FORM_DIR)):
+        logger.warning(f"Path traversal 시도 차단 (realpath): {form_filename}")
+        return None
     if os.path.exists(filepath):
         return filepath
     return None
@@ -179,6 +230,11 @@ def render_vendor_tab():
             file_name = row.get("_file_name")
             is_new = row.get("_is_new", False)
 
+            if not name:
+                continue
+
+            # 입력값 검증: 업체명 sanitize
+            name = _validate_vendor_name(name)
             if not name:
                 continue
 
