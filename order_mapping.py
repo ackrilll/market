@@ -287,7 +287,7 @@ def _build_unified_mapping_table(vendor):
             mapping_desc = f"복사: {reverse_copy[col_str]}"
         else:
             mapping_desc = f"{col_str} (동일)"
-        rows.append({"업체 칼럼": col_str, "원본 칼럼": mapping_desc})
+        rows.append({"원본 칼럼": mapping_desc, "업체 칼럼": col_str})
     return rows
 
 
