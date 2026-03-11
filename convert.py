@@ -155,6 +155,7 @@ def inject_custom_css():
     }
     .top-header-logout {
         color: #000;
+        background: #fff;
         cursor: pointer;
         font-size: 12px;
         margin-left: 12px;
@@ -726,6 +727,12 @@ def main():
         render_login_page()
         return
 
+    # 로그아웃 query param 처리
+    if st.query_params.get("logout") == "true":
+        st.query_params.clear()
+        logout()
+        return
+
     user = get_current_user()
     display_name = html.escape(user.get("display_name", ""))
 
@@ -751,12 +758,9 @@ def main():
                 '<span class="top-header-user">{display_name} 님' +
                 '<span class="top-header-logout" id="header-logout-btn">로그아웃</span></span>';
             parent.body.appendChild(header);
-            // 로그아웃 클릭 이벤트
+            // 로그아웃 클릭 → query param으로 트리거
             parent.getElementById('header-logout-btn').addEventListener('click', function() {{
-                var bs = parent.querySelectorAll('button');
-                for (var i = 0; i < bs.length; i++) {{
-                    if (bs[i].textContent.trim() === '로그아웃') {{ bs[i].click(); break; }}
-                }}
+                window.parent.location.href = window.parent.location.pathname + '?logout=true';
             }});
             // 사이드바 접기 버튼 제거
             function removeCollapseBtn() {{
@@ -904,11 +908,6 @@ def main():
             label_visibility="collapsed",
         )
 
-        # 로그아웃 버튼 (숨김 — 상단 헤더에서 JS로 트리거)
-        st.markdown('<div style="display:none">', unsafe_allow_html=True)
-        if st.button("로그아웃", key="logout_btn_hidden"):
-            logout()
-        st.markdown('</div>', unsafe_allow_html=True)
 
 
     # ── 메인 콘텐츠 ──
