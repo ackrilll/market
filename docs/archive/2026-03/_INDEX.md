@@ -12,3 +12,17 @@
 ### 문서 목록
 - `streamlit-deploy.report.md` - 기존 배포 보고서
 - `streamlit-deploy-security.report.md` - 보안 조치 완료 보고서 (PDCA)
+
+## mapping-tab-renewal (매핑 관리 탭 리뉴얼)
+
+| 항목 | 값 |
+|------|-----|
+| Feature | mapping-tab-renewal |
+| 완료일 | 2026-03-11 |
+| Match Rate | 100% (55/55) |
+| Phase | completed → archived |
+
+### 문서 목록
+- `mapping-tab-renewal.design.md` - 설계 문서
+- `mapping-tab-renewal.analysis.md` - Gap 분석 보고서
+- `mapping-tab-renewal.report.md` - 완료 보고서
