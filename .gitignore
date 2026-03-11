@@ -27,6 +27,19 @@ Thumbs.db
 # Logs
 *.log
 
-# Data (runtime files)
+# Data (runtime files - 개인정보 포함)
 data/converted/
 data/raw/
+
+# Test data (개인정보 포함)
+user_test/
+
+# IDE / Claude settings
+.claude/
+
+# PDCA docs (배포 불필요)
+docs/.bkit-memory.json
+docs/.pdca-status.json
+
+# Developer notes
+statement.md
