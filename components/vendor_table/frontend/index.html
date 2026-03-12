@@ -576,46 +576,10 @@
           }
         };
         zone.appendChild(nameSpan);
-
-        const clearBtn = document.createElement("button");
-        clearBtn.className = "clear-btn";
-        clearBtn.textContent = "X";
-        clearBtn.title = "파일 제거";
-        clearBtn.onclick = (e) => {
-          e.stopPropagation();
-          row.form_file = "";
-          row._file_removed = true;
-          renderTable();
-          sendValue();
-        };
-        zone.appendChild(clearBtn);
       } else {
-        zone.textContent = "파일을 드래그하거나 클릭";
+        zone.textContent = "매핑 관리 탭에서 등록";
+        zone.style.cursor = "default";
       }
-
-      // 파일이 없을 때만 클릭 업로드용 file input 추가
-      if (!row.form_file) {
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = ".xlsx,.xls";
-        fileInput.onchange = (e) => {
-          if (e.target.files.length > 0) {
-            handleFile(e.target.files[0], idx);
-          }
-        };
-        zone.appendChild(fileInput);
-      }
-
-      // 드래그앤드롭 이벤트
-      zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("drag-over"); };
-      zone.ondragleave = () => { zone.classList.remove("drag-over"); };
-      zone.ondrop = (e) => {
-        e.preventDefault();
-        zone.classList.remove("drag-over");
-        if (e.dataTransfer.files.length > 0) {
-          handleFile(e.dataTransfer.files[0], idx);
-        }
-      };
 
       return zone;
     }

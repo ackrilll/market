@@ -214,14 +214,12 @@ def render_vendor_tab():
             except Exception as e:
                 st.error("업체 삭제에 실패했습니다.")
 
-        # 2) 행 데이터 처리 (수정/추가/파일 업로드)
+        # 2) 행 데이터 처리 (수정/추가)
         result_rows = result.get("rows", [])
         for row in result_rows:
             row_id = row.get("id")
             name = str(row.get("name", "")).strip()
             kw_str = str(row.get("keywords", "")).strip()
-            file_data = row.get("_file_data")
-            file_name = row.get("_file_name")
             is_new = row.get("_is_new", False)
 
             if not name:
@@ -236,28 +234,15 @@ def render_vendor_tab():
             if is_new and row_id is None:
                 keywords = [k.strip() for k in kw_str.split(",") if k.strip()] if kw_str else [name]
                 try:
-                    new_id = add_vendor_to_config(name=name, keywords=keywords)
+                    add_vendor_to_config(name=name, keywords=keywords)
                     changes_applied = True
-
-                    # 파일이 첨부된 경우
-                    if file_data and file_name:
-                        try:
-                            raw = base64.b64decode(file_data)
-                            form_fn = _save_form_file_from_bytes(raw, name, file_name)
-                            cols = _read_form_columns_from_bytes(raw)
-                            updates = {"form_file": form_fn}
-                            if cols:
-                                updates["target_columns"] = cols
-                            update_vendor_in_config(new_id, updates)
-                        except Exception:
-                            pass
                 except ValueError:
                     pass  # 이미 존재하는 업체 — 무시
                 except Exception as e:
                     st.error(f"'{name}' 추가에 실패했습니다.")
                 continue
 
-            # 기존 업체 수정
+            # 기존 업체 수정 (이름/키워드만)
             if row_id is not None:
                 vendor = next((v for v in vendors if v["id"] == row_id), None)
                 if vendor is None:
@@ -271,24 +256,6 @@ def render_vendor_tab():
                     new_kw = [k.strip() for k in kw_str.split(",") if k.strip()]
                     if new_kw:
                         updates["keywords"] = new_kw
-
-                # 파일 업로드 처리
-                if file_data and file_name:
-                    try:
-                        raw = base64.b64decode(file_data)
-                        vname = name if name else vendor["name"]
-                        form_fn = _save_form_file_from_bytes(raw, vname, file_name)
-                        cols = _read_form_columns_from_bytes(raw)
-                        updates["form_file"] = form_fn
-                        if cols:
-                            updates["target_columns"] = cols
-                    except Exception as e:
-                        st.error("파일 저장에 실패했습니다.")
-
-                # 파일 제거 처리
-                file_removed = row.get("_file_removed", False)
-                if file_removed and not file_data:
-                    updates["form_file"] = ""
 
                 if updates:
                     try:

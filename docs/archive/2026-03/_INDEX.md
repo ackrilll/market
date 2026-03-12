@@ -40,3 +40,20 @@
 - `mapping-tab-renewal.design.md` - 설계 문서
 - `mapping-tab-renewal.analysis.md` - Gap 분석 보고서
 - `mapping-tab-renewal.report.md` - 완료 보고서
+
+---
+
+## column-mapping-dnd (칼럼 매핑 드래그 앤 드롭 UI)
+
+| 항목 | 값 |
+|------|-----|
+| Feature | column-mapping-dnd |
+| 완료일 | 2026-03-12 |
+| Match Rate | 95.5% (64/67) |
+| Phase | completed → archived |
+
+### 문서 목록
+- `column-mapping-dnd.plan.md` - 계획서
+- `column-mapping-dnd.design.md` - 설계 문서
+- `column-mapping-dnd.analysis.md` - Gap 분석 보고서
+- `column-mapping-dnd.report.md` - 완료 보고서
