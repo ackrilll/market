@@ -299,6 +299,7 @@
       min-width: 60px;
       flex-shrink: 0;
       position: relative;
+      overflow: hidden;
     }
 
     .svg-area svg {
@@ -795,14 +796,15 @@
 
       if (!sourceColumns.length || !targetColumns.length) {
         svg.innerHTML = "";
+        svgArea.style.height = "0px";
         return;
       }
 
-      // SVG 높이를 매핑 영역에 맞춤
-      const areaRect = document.getElementById("mappingArea").getBoundingClientRect();
+      // SVG 높이를 보이는 패널 높이에 맞춤 (scrollHeight가 아닌 clientHeight)
       const headerH = 37; // column-panel-header 높이
-      svgArea.style.height = Math.max(sourceList.scrollHeight, targetList.scrollHeight) + headerH + "px";
-      svg.setAttribute("viewBox", "0 0 60 " + svgArea.offsetHeight);
+      const visibleH = Math.max(sourceList.clientHeight, targetList.clientHeight) + headerH;
+      svgArea.style.height = visibleH + "px";
+      svg.setAttribute("viewBox", "0 0 60 " + visibleH);
 
       let paths = "";
       const sourceItems = sourceList.querySelectorAll(".column-item");
@@ -818,6 +820,11 @@
         targetMap[el.dataset.col] = el;
       });
 
+      // 스크롤 컨테이너의 보이는 영역 경계
+      const srcListRect = sourceList.getBoundingClientRect();
+      const tgtListRect = targetList.getBoundingClientRect();
+      const svgRect = svgArea.getBoundingClientRect();
+
       Object.entries(mappings).forEach(([tgtCol, m]) => {
         if (m.type !== "rename") return;
         const srcEl = sourceMap[m.value];
@@ -826,12 +833,20 @@
 
         const srcRect = srcEl.getBoundingClientRect();
         const tgtRect = tgtEl.getBoundingClientRect();
-        const svgRect = svgArea.getBoundingClientRect();
+
+        // 스크롤 밖 항목은 건너뛰기
+        const srcVisible = srcRect.bottom > srcListRect.top && srcRect.top < srcListRect.bottom;
+        const tgtVisible = tgtRect.bottom > tgtListRect.top && tgtRect.top < tgtListRect.bottom;
+        if (!srcVisible && !tgtVisible) return;
 
         const y1 = srcRect.top + srcRect.height / 2 - svgRect.top;
         const y2 = tgtRect.top + tgtRect.height / 2 - svgRect.top;
 
-        paths += '<path d="M 0 ' + y1 + ' C 30 ' + y1 + ', 30 ' + y2 + ', 60 ' + y2 + '" />';
+        // 보이는 영역 내로 클램프
+        const clampY1 = Math.max(0, Math.min(visibleH, y1));
+        const clampY2 = Math.max(0, Math.min(visibleH, y2));
+
+        paths += '<path d="M 0 ' + clampY1 + ' C 30 ' + clampY1 + ', 30 ' + clampY2 + ', 60 ' + clampY2 + '" />';
       });
 
       svg.innerHTML = paths;
@@ -993,6 +1008,10 @@
     setupUploadZone("sourceUpload", "sourceFileInput", "source");
     setupUploadZone("targetUpload", "targetFileInput", "target");
     setupButtons();
+
+    // 스크롤 시 연결선 갱신
+    document.getElementById("sourceList").addEventListener("scroll", () => updateConnectors());
+    document.getElementById("targetList").addEventListener("scroll", () => updateConnectors());
 
     window.addEventListener("message", (event) => {
       if (event.data.type === "streamlit:render") {
