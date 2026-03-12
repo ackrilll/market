@@ -10,7 +10,6 @@ import base64
 import io
 import re
 import logging
-import streamlit.components.v1 as stc
 logger = logging.getLogger(__name__)
 
 # ── 보안 상수 ──
@@ -162,41 +161,11 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 양식 파일 즉시 다운로드 처리 ──
-    if "_vendor_dl_file" in st.session_state:
-        dl_file = st.session_state.pop("_vendor_dl_file")
-        filepath = _get_form_file_path(dl_file)
-        if filepath:
-            with open(filepath, "rb") as f:
-                file_bytes = f.read()
-            ext = os.path.splitext(dl_file)[1].lower()
-            mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    if ext == ".xlsx"
-                    else "application/vnd.ms-excel")
-            b64 = base64.b64encode(file_bytes).decode()
-            import html as _html
-            safe_fn = _html.escape(dl_file, quote=True)
-            stc.html(
-                f'<a id="dl" href="data:{mime};base64,{b64}" '
-                f'download="{safe_fn}" style="display:none">dl</a>'
-                f'<script>document.getElementById("dl").click();</script>',
-                height=0,
-            )
-
-    # ── 커스텀 테이블 컴포넌트 ──
+    # ── 커스텀 테이블 컴포넌트 (다운로드는 컴포넌트 내부에서 직접 처리) ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
-        # 다운로드 요청이 있으면 session_state에 저장 후 rerun
-        dl_req = result.get("download_request")
-        if dl_req:
-            form_file = dl_req.get("form_file", "")
-            if form_file:
-                st.session_state["_vendor_dl_file"] = form_file
-                st.rerun()
-            return
-
         changes_applied = False
 
         # 1) 삭제 처리 (이미 삭제된 ID는 무시)

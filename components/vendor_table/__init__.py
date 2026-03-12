@@ -28,11 +28,23 @@ def vendor_table(vendors, key=None):
     vendor_data = []
     for v in vendors:
         keywords = ", ".join(v.get("keywords", [v["name"]]))
+        form_file = v.get("form_file", "")
+        # 양식 파일이 있으면 base64로 인코딩하여 컴포넌트에 전달
+        form_file_b64 = ""
+        if form_file:
+            form_path = os.path.join(_FORM_DIR, form_file)
+            if os.path.exists(form_path):
+                try:
+                    with open(form_path, "rb") as f:
+                        form_file_b64 = base64.b64encode(f.read()).decode()
+                except Exception:
+                    pass
         vendor_data.append({
             "id": v["id"],
             "name": v["name"],
             "keywords": keywords,
-            "form_file": v.get("form_file", ""),
+            "form_file": form_file,
+            "form_file_b64": form_file_b64,
         })
 
     component_value = _component(
