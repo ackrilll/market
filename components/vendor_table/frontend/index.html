@@ -429,44 +429,14 @@
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
         nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 컴포넌트 내부에서 직접 다운로드
+        // 파일 클릭 시 Python에 다운로드 요청 전달
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
-          if (row.form_file_b64 && row.form_file) {
-            try {
-              var byteStr = atob(row.form_file_b64);
-              var bytes = new Uint8Array(byteStr.length);
-              for (var i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
-              var ext = row.form_file.split('.').pop().toLowerCase();
-              var mime = ext === 'xlsx'
-                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                : 'application/vnd.ms-excel';
-              var blob = new Blob([bytes], { type: mime });
-              var url = URL.createObjectURL(blob);
-              // sandbox 환경에서도 동작하도록 새 창에서 다운로드
-              var w = window.open('', '_blank');
-              if (w) {
-                w.document.title = row.form_file;
-                var a = w.document.createElement('a');
-                a.href = url;
-                a.download = row.form_file;
-                w.document.body.appendChild(a);
-                a.click();
-                setTimeout(function() { w.close(); URL.revokeObjectURL(url); }, 2000);
-              } else {
-                // 팝업 차단 시 현재 프레임에서 시도
-                var a2 = document.createElement('a');
-                a2.href = url;
-                a2.download = row.form_file;
-                document.body.appendChild(a2);
-                a2.click();
-                document.body.removeChild(a2);
-                setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
-              }
-            } catch (err) {
-              alert('다운로드 실패: ' + err.message);
-            }
+          if (row.form_file && row.id !== null) {
+            const value = buildValue();
+            value.download_request = { vendor_id: row.id, form_file: row.form_file };
+            setComponentValue(value);
           }
         };
         zone.appendChild(nameSpan);
@@ -479,7 +449,6 @@
           e.stopPropagation();
           row.form_file = "";
           row._file_removed = true;
-          row.form_file_b64 = "";
           renderTable();
           sendValue();
         };
@@ -640,8 +609,7 @@
           name: v.name,
           keywords: v.keywords,
           form_file: v.form_file || "",
-          form_file_b64: v.form_file_b64 || "",
-          selected: false,
+                    selected: false,
           _is_new: false,
         }));
         initialized = true;
@@ -669,8 +637,7 @@
           if (!currentIds.has(v.id)) {
             rows.push({
               id: v.id, name: v.name, keywords: v.keywords,
-              form_file: v.form_file || "", form_file_b64: v.form_file_b64 || "",
-              selected: false, _is_new: false,
+              form_file: v.form_file || "",               selected: false, _is_new: false,
             });
           }
         });
@@ -681,8 +648,7 @@
             const nv = newVendors.find(v => v.id === r.id);
             if (nv && !r._file_data) {
               r.form_file = nv.form_file || "";
-              r.form_file_b64 = nv.form_file_b64 || "";
-            }
+                          }
           }
         });
 

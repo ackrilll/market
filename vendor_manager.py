@@ -161,11 +161,44 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 커스텀 테이블 컴포넌트 (다운로드는 컴포넌트 내부에서 직접 처리) ──
+    # ── 양식 파일 다운로드 처리 (메인 페이지에서 직접 — iframe 아님) ──
+    if "_vendor_dl_file" in st.session_state:
+        dl_file = st.session_state.pop("_vendor_dl_file")
+        filepath = _get_form_file_path(dl_file)
+        if filepath:
+            with open(filepath, "rb") as f:
+                file_bytes = f.read()
+            ext = os.path.splitext(dl_file)[1].lower()
+            mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    if ext == ".xlsx"
+                    else "application/vnd.ms-excel")
+            b64 = base64.b64encode(file_bytes).decode()
+            import html as _html
+            safe_fn = _html.escape(dl_file, quote=True)
+            # st.markdown(unsafe_allow_html=True)는 메인 페이지에 직접 렌더링 (iframe X)
+            # <img onerror>로 자동 클릭 트리거 (innerHTML에서 <script>는 실행 안 되지만 onerror는 동작)
+            st.markdown(
+                f'<a id="__dl" href="data:{mime};base64,{b64}" '
+                f'download="{safe_fn}" style="display:none">dl</a>'
+                f'<img src="x" onerror="document.getElementById(\'__dl\').click();" '
+                f'style="display:none">',
+                unsafe_allow_html=True,
+            )
+
+    # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
+        # 다운로드 요청 처리
+        dl_req = result.get("download_request")
+        if dl_req:
+            form_file = dl_req.get("form_file", "")
+            if form_file:
+                st.session_state["_vendor_dl_file"] = form_file
+                st.rerun()
+            return
+
         changes_applied = False
 
         # 1) 삭제 처리 (이미 삭제된 ID는 무시)
