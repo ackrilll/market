@@ -22,6 +22,7 @@ from map import (
     _FORM_DIR,
     _BASE_DIR,
 )
+from excel_utils import read_excel_with_header_detection
 from components.column_mapper import column_mapper
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def _load_vendor_form(vendor_name):
         filepath = os.path.join(_FORM_DIR, f"{vendor_name}{ext}")
         if os.path.exists(filepath):
             try:
-                return pd.read_excel(filepath, nrows=5), filepath
+                return read_excel_with_header_detection(filepath, nrows=5), filepath
             except Exception:
                 pass
 
@@ -61,7 +62,7 @@ def _load_vendor_form(vendor_name):
             if vendor_name in filename and (filename.endswith('.xlsx') or filename.endswith('.xls')):
                 filepath = os.path.join(_FORM_DIR, filename)
                 try:
-                    return pd.read_excel(filepath, nrows=5), filepath
+                    return read_excel_with_header_detection(filepath, nrows=5), filepath
                 except Exception:
                     pass
     return None, None
@@ -144,7 +145,8 @@ def _render_classification_section():
         # 원본 파일 읽기
         try:
             source_file.seek(0)
-            source_df = pd.read_excel(source_file, nrows=5)
+            file_bytes = source_file.read()
+            source_df = read_excel_with_header_detection(file_bytes, nrows=5)
             source_columns = list(source_df.columns)
         except Exception as e:
             st.error("파일 읽기에 실패했습니다. 올바른 Excel 파일인지 확인하세요.")
@@ -272,7 +274,7 @@ def _save_uploaded_file(file_data, vendor_name, side):
             return [], None
 
         # Excel 검증 + 칼럼 추출
-        df = pd.read_excel(io.BytesIO(raw), nrows=5)
+        df = read_excel_with_header_detection(raw, nrows=5)
         columns = [str(c) for c in df.columns]
 
         if side == "target":

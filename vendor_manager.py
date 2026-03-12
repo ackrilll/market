@@ -25,6 +25,7 @@ from map import (
     reload_config,
     _FORM_DIR,
 )
+from excel_utils import read_excel_with_header_detection
 from components.vendor_table import vendor_table
 
 
@@ -97,7 +98,7 @@ def _save_form_file_from_bytes(file_bytes, vendor_name, original_filename):
 def _read_form_columns_from_bytes(file_bytes):
     """바이트 데이터에서 엑셀 칼럼 헤더를 추출합니다."""
     try:
-        df = pd.read_excel(io.BytesIO(file_bytes), nrows=5)
+        df = read_excel_with_header_detection(file_bytes, nrows=5)
         return list(df.columns)
     except Exception:
         return []
@@ -113,7 +114,8 @@ def _read_form_columns(uploaded_file):
     """업로드된 엑셀 파일에서 칼럼 헤더를 추출합니다."""
     try:
         uploaded_file.seek(0)
-        df = pd.read_excel(uploaded_file, nrows=5)
+        file_bytes = uploaded_file.read()
+        df = read_excel_with_header_detection(file_bytes, nrows=5)
         return list(df.columns), df
     except Exception as e:
         st.error("양식 파일 읽기에 실패했습니다.")
@@ -126,7 +128,7 @@ def _load_existing_form(vendor_name):
         filepath = os.path.join(_FORM_DIR, f"{vendor_name}{ext}")
         if os.path.exists(filepath):
             try:
-                df = pd.read_excel(filepath, nrows=5)
+                df = read_excel_with_header_detection(filepath, nrows=5)
                 return df, filepath
             except Exception:
                 pass
@@ -168,7 +170,7 @@ def render_vendor_tab():
         filepath = _get_form_file_path(pv_file)
         if filepath:
             try:
-                df = pd.read_excel(filepath)
+                df = read_excel_with_header_detection(filepath)
                 preview_data = {
                     "form_file": pv_file,
                     "headers": list(df.columns.astype(str)),
