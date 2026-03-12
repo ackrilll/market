@@ -62,22 +62,26 @@ def commit_file(repo_path, content_bytes, message="auto: update file"):
         "Accept": "application/vnd.github.v3+json",
     }
 
-    sha = _get_file_sha(config["repo"], repo_path, config["branch"], headers)
-
     url = f"https://api.github.com/repos/{config['repo']}/contents/{repo_path}"
-    payload = {
-        "message": message,
-        "content": base64.b64encode(content_bytes).decode("ascii"),
-        "branch": config["branch"],
-    }
-    if sha:
-        payload["sha"] = sha
+    encoded = base64.b64encode(content_bytes).decode("ascii")
 
-    resp = requests.put(url, headers=headers, json=payload, timeout=30)
-    if resp.status_code in (200, 201):
-        logger.info(f"GitHub 커밋 성공: {repo_path}")
-        return True
-    else:
+    for attempt in range(3):
+        sha = _get_file_sha(config["repo"], repo_path, config["branch"], headers)
+        payload = {
+            "message": message,
+            "content": encoded,
+            "branch": config["branch"],
+        }
+        if sha:
+            payload["sha"] = sha
+
+        resp = requests.put(url, headers=headers, json=payload, timeout=30)
+        if resp.status_code in (200, 201):
+            logger.info(f"GitHub 커밋 성공: {repo_path}")
+            return True
+        if resp.status_code == 409 and attempt < 2:
+            logger.info(f"GitHub SHA 충돌, 재시도 ({attempt + 1}/3): {repo_path}")
+            continue
         logger.warning(f"GitHub 커밋 실패 [{resp.status_code}]: {resp.text[:200]}")
         return False
 
