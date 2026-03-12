@@ -434,16 +434,39 @@
           e.stopPropagation();
           e.preventDefault();
           if (row.form_file_b64 && row.form_file) {
-            var ext = row.form_file.split('.').pop().toLowerCase();
-            var mime = ext === 'xlsx'
-              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-              : 'application/vnd.ms-excel';
-            var el = document.createElement('a');
-            el.href = 'data:' + mime + ';base64,' + row.form_file_b64;
-            el.download = row.form_file;
-            document.body.appendChild(el);
-            el.click();
-            document.body.removeChild(el);
+            try {
+              var byteStr = atob(row.form_file_b64);
+              var bytes = new Uint8Array(byteStr.length);
+              for (var i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+              var ext = row.form_file.split('.').pop().toLowerCase();
+              var mime = ext === 'xlsx'
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                : 'application/vnd.ms-excel';
+              var blob = new Blob([bytes], { type: mime });
+              var url = URL.createObjectURL(blob);
+              // sandbox 환경에서도 동작하도록 새 창에서 다운로드
+              var w = window.open('', '_blank');
+              if (w) {
+                w.document.title = row.form_file;
+                var a = w.document.createElement('a');
+                a.href = url;
+                a.download = row.form_file;
+                w.document.body.appendChild(a);
+                a.click();
+                setTimeout(function() { w.close(); URL.revokeObjectURL(url); }, 2000);
+              } else {
+                // 팝업 차단 시 현재 프레임에서 시도
+                var a2 = document.createElement('a');
+                a2.href = url;
+                a2.download = row.form_file;
+                document.body.appendChild(a2);
+                a2.click();
+                document.body.removeChild(a2);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+              }
+            } catch (err) {
+              alert('다운로드 실패: ' + err.message);
+            }
           }
         };
         zone.appendChild(nameSpan);
