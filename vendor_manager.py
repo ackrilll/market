@@ -161,18 +161,19 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 양식 파일 미리보기 표시 ──
+    # ── 양식 파일 미리보기 데이터 준비 ──
+    preview_data = None
     if "_vendor_preview_file" in st.session_state:
         pv_file = st.session_state["_vendor_preview_file"]
         filepath = _get_form_file_path(pv_file)
         if filepath:
             try:
                 df = pd.read_excel(filepath)
-                with st.expander(f"📄 {pv_file}", expanded=True):
-                    st.dataframe(df, use_container_width=True, height=400)
-                    if st.button("닫기", key="_close_preview"):
-                        del st.session_state["_vendor_preview_file"]
-                        st.rerun()
+                preview_data = {
+                    "form_file": pv_file,
+                    "headers": list(df.columns.astype(str)),
+                    "rows": df.fillna("").astype(str).values.tolist(),
+                }
             except Exception:
                 st.error("양식 파일을 읽을 수 없습니다.")
                 del st.session_state["_vendor_preview_file"]
@@ -181,10 +182,16 @@ def render_vendor_tab():
             del st.session_state["_vendor_preview_file"]
 
     # ── 커스텀 테이블 컴포넌트 ──
-    result = vendor_table(vendors=vendors, key="vendor_table_component")
+    result = vendor_table(vendors=vendors, preview_data=preview_data, key="vendor_table_component")
 
     # ── 컴포넌트 반환값 처리 ──
     if result is not None:
+        # 미리보기 닫기 요청
+        if result.get("preview_close"):
+            st.session_state.pop("_vendor_preview_file", None)
+            st.rerun()
+            return
+
         # 미리보기 요청 처리
         pv_req = result.get("preview_request")
         if pv_req:

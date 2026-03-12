@@ -13,12 +13,13 @@ _component = components.declare_component("vendor_table", path=_COMPONENT_DIR)
 _FORM_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "target_form")
 
 
-def vendor_table(vendors, key=None):
+def vendor_table(vendors, preview_data=None, key=None):
     """
     커스텀 업체 관리 테이블을 렌더링합니다.
 
     Args:
         vendors: 업체 데이터 리스트 (각 항목: id, name, keywords, form_file)
+        preview_data: 미리보기 데이터 (form_file, headers, rows) 또는 None
         key: Streamlit 위젯 키
 
     Returns:
@@ -37,6 +38,7 @@ def vendor_table(vendors, key=None):
 
     component_value = _component(
         vendors=vendor_data,
+        preview_data=preview_data,
         key=key,
         default=None,
     )

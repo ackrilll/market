@@ -276,6 +276,81 @@
       color: #2e7d32;
       border: 1px solid #c8e6c9;
     }
+
+    /* ── 미리보기 행 ── */
+    .preview-row td {
+      padding: 0 !important;
+      background: #f8f9fb;
+    }
+
+    .preview-container {
+      padding: 12px 16px;
+      border-top: 2px solid #2196F3;
+      border-bottom: 2px solid #2196F3;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .preview-header .preview-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .preview-header .preview-close-btn {
+      background: none;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .preview-header .preview-close-btn:hover {
+      background: #eee;
+      color: #e53935;
+      border-color: #e53935;
+    }
+
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      max-height: 360px;
+      overflow: auto;
+      display: block;
+    }
+
+    .preview-table thead th {
+      background: #e3f2fd;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      color: #1565c0;
+      border: 1px solid #bbdefb;
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    .preview-table tbody td {
+      padding: 4px 8px;
+      border: 1px solid #e0e0e0;
+      color: #333;
+      white-space: nowrap;
+      background: #fff;
+    }
+
+    .preview-table tbody tr:nth-child(even) td {
+      background: #fafafa;
+    }
   </style>
 </head>
 
@@ -321,6 +396,8 @@
     let initialized = false;
     let debounceTimer = null;
     let dragSrcIdx = null; // 드래그 시작 행 인덱스
+    let previewData = null; // Python에서 전달받은 미리보기 데이터
+    let previewFormFile = null; // 현재 미리보기 중인 파일명
 
     // ── 렌더링 ──
     function renderTable() {
@@ -412,6 +489,65 @@
         tr.appendChild(tdFile);
 
         tbody.appendChild(tr);
+
+        // ── 미리보기 행 삽입 (해당 업체의 form_file과 일치 시) ──
+        if (previewData && row.form_file && row.form_file === previewData.form_file) {
+          const pvTr = document.createElement("tr");
+          pvTr.className = "preview-row";
+          const pvTd = document.createElement("td");
+          pvTd.colSpan = 5;
+
+          const container = document.createElement("div");
+          container.className = "preview-container";
+
+          // 헤더 (제목 + 닫기 버튼)
+          const header = document.createElement("div");
+          header.className = "preview-header";
+          const title = document.createElement("span");
+          title.className = "preview-title";
+          title.textContent = "📄 " + previewData.form_file;
+          header.appendChild(title);
+          const closeBtn = document.createElement("button");
+          closeBtn.className = "preview-close-btn";
+          closeBtn.textContent = "닫기 ✕";
+          closeBtn.onclick = () => {
+            // Python에 닫기 요청
+            const value = buildValue();
+            value.preview_close = true;
+            setComponentValue(value);
+          };
+          header.appendChild(closeBtn);
+          container.appendChild(header);
+
+          // 데이터 테이블
+          const table = document.createElement("table");
+          table.className = "preview-table";
+          const thead = document.createElement("thead");
+          const thRow = document.createElement("tr");
+          previewData.headers.forEach(h => {
+            const th = document.createElement("th");
+            th.textContent = h;
+            thRow.appendChild(th);
+          });
+          thead.appendChild(thRow);
+          table.appendChild(thead);
+          const tbodyPv = document.createElement("tbody");
+          previewData.rows.forEach(r => {
+            const dataRow = document.createElement("tr");
+            r.forEach(cell => {
+              const td = document.createElement("td");
+              td.textContent = cell;
+              dataRow.appendChild(td);
+            });
+            tbodyPv.appendChild(dataRow);
+          });
+          table.appendChild(tbodyPv);
+          container.appendChild(table);
+
+          pvTd.appendChild(container);
+          pvTr.appendChild(pvTd);
+          tbody.appendChild(pvTr);
+        }
       });
 
       updateDeleteBtn();
@@ -601,6 +737,9 @@
     function onRender(event) {
       if (!event.detail) return;
       const args = event.detail.args;
+
+      // 미리보기 데이터 갱신
+      previewData = args.preview_data || null;
 
       if (!initialized && args.vendors) {
         vendors = args.vendors;
