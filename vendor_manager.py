@@ -173,24 +173,15 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
-            import json as _json
             b64 = base64.b64encode(file_bytes).decode()
-            safe_filename = _json.dumps(dl_file)
-            safe_mime = _json.dumps(mime)
-            stc.html(f"""<script>
-            var b = atob("{b64}");
-            var a = new Uint8Array(b.length);
-            for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
-            var blob = new Blob([a], {{type: {safe_mime}}});
-            var url = URL.createObjectURL(blob);
-            var el = document.createElement("a");
-            el.href = url;
-            el.download = {safe_filename};
-            document.body.appendChild(el);
-            el.click();
-            document.body.removeChild(el);
-            setTimeout(function() {{ URL.revokeObjectURL(url); }}, 1000);
-            </script>""", height=1)
+            import html as _html
+            safe_fn = _html.escape(dl_file, quote=True)
+            stc.html(
+                f'<a id="dl" href="data:{mime};base64,{b64}" '
+                f'download="{safe_fn}" style="display:none">dl</a>'
+                f'<script>document.getElementById("dl").click();</script>',
+                height=0,
+            )
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
