@@ -44,23 +44,23 @@
       "name": "강화군농협",
       "rename_map": {},
       "target_columns": [
-        "주문번호(쇼핑몰)",
-        "수령인",
-        "상품약어",
-        "수량",
-        "수령인 전화번호",
-        "수령인 휴대폰",
-        "우편번호",
-        "수령인주소",
-        "배송메세지",
-        "구매자",
-        "구매자 휴대폰",
-        ".",
-        "사방넷 주문번호(필수)",
-        "송장번호(필수)",
-        "택배사(필수)",
-        "사방넷코드(필수)",
-        "택배사코드(필수)"
+        "Unnamed: 0",
+        "수신: 강화군 농협",
+        "Unnamed: 2",
+        "Unnamed: 3",
+        "Unnamed: 4",
+        "Unnamed: 5",
+        "Unnamed: 6",
+        "Unnamed: 7",
+        "Unnamed: 8",
+        "Unnamed: 9",
+        "Unnamed: 10",
+        "발신: 365건강농산",
+        "Unnamed: 12",
+        "Unnamed: 13",
+        "Unnamed: 14",
+        "Unnamed: 15",
+        "Unnamed: 16"
       ],
       "constant_values": {},
       "copy_map": {},
@@ -68,7 +68,7 @@
       "keywords": [
         "강화군농협"
       ],
-      "form_file": ""
+      "form_file": "강화군농협.xlsx"
     },
     {
       "id": 1,
