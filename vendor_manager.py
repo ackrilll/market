@@ -11,7 +11,6 @@ import io
 import re
 import logging
 import streamlit.components.v1 as stc
-
 logger = logging.getLogger(__name__)
 
 # ── 보안 상수 ──
@@ -185,9 +184,13 @@ def render_vendor_tab():
             var blob = new Blob([a], {{type: {safe_mime}}});
             var url = URL.createObjectURL(blob);
             var el = document.createElement("a");
-            el.href = url; el.download = {safe_filename}; el.click();
-            URL.revokeObjectURL(url);
-            </script>""", height=0)
+            el.href = url;
+            el.download = {safe_filename};
+            document.body.appendChild(el);
+            el.click();
+            document.body.removeChild(el);
+            setTimeout(function() {{ URL.revokeObjectURL(url); }}, 1000);
+            </script>""", height=1)
 
     # ── 커스텀 테이블 컴포넌트 ──
     result = vendor_table(vendors=vendors, key="vendor_table_component")
