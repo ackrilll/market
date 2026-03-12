@@ -428,14 +428,14 @@
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
         nameSpan.textContent = row.form_file;
-        nameSpan.title = row.form_file + " (클릭하여 다운로드)";
-        // 파일 클릭 시 Python에 다운로드 요청 전달
+        nameSpan.title = row.form_file + " (클릭하여 미리보기)";
+        // 파일 클릭 시 Python에 미리보기 요청 전달
         nameSpan.onclick = (e) => {
           e.stopPropagation();
           e.preventDefault();
           if (row.form_file && row.id !== null) {
             const value = buildValue();
-            value.download_request = { vendor_id: row.id, form_file: row.form_file };
+            value.preview_request = { vendor_id: row.id, form_file: row.form_file };
             setComponentValue(value);
           }
         };
