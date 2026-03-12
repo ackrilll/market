@@ -45,7 +45,7 @@
       "rename_map": {},
       "target_columns": [
         "Unnamed: 0",
-        "수신: 강화군 농협",
+        "수신: 강화군농협",
         "Unnamed: 2",
         "Unnamed: 3",
         "Unnamed: 4",
@@ -55,12 +55,12 @@
         "Unnamed: 8",
         "Unnamed: 9",
         "Unnamed: 10",
-        "발신: 365건강농산",
+        "Unnamed: 11",
         "Unnamed: 12",
         "Unnamed: 13",
         "Unnamed: 14",
         "Unnamed: 15",
-        "Unnamed: 16"
+        "발신: 365건강농산"
       ],
       "constant_values": {},
       "copy_map": {},
@@ -68,7 +68,7 @@
       "keywords": [
         "강화군농협"
       ],
-      "form_file": ""
+      "form_file": "강화군농협.xlsx"
     },
     {
       "id": 1,
