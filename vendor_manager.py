@@ -161,7 +161,7 @@ def render_vendor_tab():
 
     vendors = get_all_vendors()
 
-    # ── 양식 파일 다운로드 처리 (st.download_button — 확실하게 동작) ──
+    # ── 양식 파일 즉시 다운로드 (srcdoc iframe — sandbox 없음, script 실행 가능) ──
     if "_vendor_dl_file" in st.session_state:
         dl_file = st.session_state.pop("_vendor_dl_file")
         filepath = _get_form_file_path(dl_file)
@@ -172,12 +172,25 @@ def render_vendor_tab():
             mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     if ext == ".xlsx"
                     else "application/vnd.ms-excel")
-            st.download_button(
-                label=f"📥 {dl_file} 다운로드",
-                data=file_bytes,
-                file_name=dl_file,
-                mime=mime,
-                key="_form_dl_btn",
+            b64 = base64.b64encode(file_bytes).decode()
+            import html as _html
+            safe_fn = _html.escape(dl_file, quote=True)
+            # srcdoc iframe: 메인 페이지에 sandbox 없는 iframe 생성
+            # srcdoc 내 <script>는 정상 실행됨 (innerHTML과 달리)
+            srcdoc_content = (
+                '<html><body><script>'
+                'var a=document.createElement("a");'
+                f'a.href="data:{mime};base64,{b64}";'
+                f'a.download="{safe_fn}";'
+                'document.body.appendChild(a);'
+                'a.click();'
+                '<\\/script></body></html>'
+            )
+            srcdoc_escaped = _html.escape(srcdoc_content, quote=True)
+            st.markdown(
+                f'<iframe srcdoc="{srcdoc_escaped}" '
+                f'style="display:none;width:0;height:0;border:none;"></iframe>',
+                unsafe_allow_html=True,
             )
 
     # ── 커스텀 테이블 컴포넌트 ──
