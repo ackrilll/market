@@ -172,7 +172,7 @@ def render_vendor_tab():
                 preview_data = {
                     "form_file": pv_file,
                     "headers": list(df.columns.astype(str)),
-                    "rows": df.fillna("").astype(str).values.tolist(),
+                    "rows": [],
                 }
             except Exception:
                 st.error("양식 파일을 읽을 수 없습니다.")

@@ -9,6 +9,9 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import io
+import re
+import logging
 from map import (
     get_all_vendors,
     get_vendor_by_name,
@@ -18,6 +21,8 @@ from map import (
     _FORM_DIR,
     _BASE_DIR,
 )
+
+logger = logging.getLogger(__name__)
 
 
 _MAPPING_CONFIG_PATH = os.path.join(_BASE_DIR, "data", "mapping_config.json")
@@ -245,6 +250,69 @@ _SPECIAL_CONSTANT = "고정값 입력"
 _SPECIAL_COPY = "다른 칼럼 복사"
 
 
+def _render_form_upload(vendor):
+    """업체 양식 파일 업로드 UI를 렌더링합니다."""
+    vendor_name = vendor["name"]
+    vendor_id = vendor["id"]
+
+    uploaded = st.file_uploader(
+        "양식 파일 업로드 (.xlsx / .xls)",
+        type=["xlsx", "xls"],
+        key=f"form_upload_{vendor_id}",
+    )
+
+    if uploaded is not None:
+        try:
+            file_bytes = uploaded.read()
+            # 파일 검증
+            if len(file_bytes) > 10 * 1024 * 1024:
+                st.error("파일 크기가 10MB를 초과합니다.")
+                return
+            pd.read_excel(io.BytesIO(file_bytes), nrows=0)
+
+            # 저장
+            os.makedirs(_FORM_DIR, exist_ok=True)
+            ext = os.path.splitext(uploaded.name)[1].lower()
+            safe_name = re.sub(r'[^\w\s\-()]', '', vendor_name).strip()
+            if not safe_name:
+                st.error("유효하지 않은 업체명입니다.")
+                return
+            filename = f"{safe_name}{ext}"
+            filepath = os.path.join(_FORM_DIR, filename)
+
+            if not os.path.realpath(filepath).startswith(os.path.realpath(_FORM_DIR)):
+                st.error("잘못된 파일 경로입니다.")
+                return
+
+            with open(filepath, "wb") as f:
+                f.write(file_bytes)
+
+            # 칼럼 추출
+            cols = list(pd.read_excel(io.BytesIO(file_bytes), nrows=5).columns)
+
+            # vendor config 업데이트
+            updates = {"form_file": filename}
+            if cols:
+                updates["target_columns"] = [str(c) for c in cols]
+            update_vendor_in_config(vendor_id, updates)
+            reload_config()
+
+            # GitHub 동기화
+            try:
+                from github_sync import commit_file
+                rel_path = os.path.relpath(filepath, _BASE_DIR).replace("\\", "/")
+                commit_file(rel_path, file_bytes, f"auto: upload form {filename}")
+            except Exception as e:
+                logger.warning(f"GitHub 동기화 실패 (양식 파일 저장은 완료): {e}")
+
+            st.success(f"양식 파일 '{filename}'이 등록되었습니다.")
+            st.rerun()
+        except pd.errors.EmptyDataError:
+            st.error("빈 파일입니다.")
+        except Exception as e:
+            st.error(f"파일 처리 실패: {e}")
+
+
 def _render_mapping_view(vendor):
     """매핑 조회 및 수정 통합 UI — 원본 칼럼을 selectbox로 표시합니다."""
     vendor_name = vendor["name"]
@@ -262,8 +330,15 @@ def _render_mapping_view(vendor):
         vendor_columns = [str(c) for c in vendor_form_df.columns]
 
     if not vendor_columns:
-        st.warning(f"'{vendor_name}' 업체의 양식 칼럼 정보가 없습니다.")
+        st.warning(f"'{vendor_name}' 업체의 양식 파일이 없습니다. 양식 파일을 업로드하세요.")
+        _render_form_upload(vendor)
         return
+
+    # 현재 양식 파일 표시 + 변경 가능
+    form_file = vendor.get("form_file", "")
+    if form_file:
+        with st.expander(f"양식 파일: {form_file}", expanded=False):
+            _render_form_upload(vendor)
 
     # 역방향 매핑
     reverse_rename = {v: k for k, v in rename_map.items()}
