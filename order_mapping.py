@@ -27,6 +27,15 @@ from components.column_mapper import column_mapper
 
 logger = logging.getLogger(__name__)
 
+# 원본 주문서(365 주문내역 통합)의 기본 칼럼 목록
+DEFAULT_SOURCE_COLUMNS = [
+    "쇼핑몰", "주문번호", "수령인", "상품명", "옵션매핑", "노출옵션",
+    "상품약어", "수량", "수령인 전화번호", "수령인 휴대폰", "우편번호",
+    "수령인주소", "배송메세지", "구매자", "구매자 휴대폰", ".",
+    "사방넷 주문번호(필수)", "송장번호(필수)", "택배사(필수)",
+    "사방넷코드(필수)", "택배사코드(필수)", "취소접수일자", "취소완료일자",
+]
+
 
 _MAPPING_CONFIG_PATH = os.path.join(_BASE_DIR, "data", "mapping_config.json")
 
@@ -329,10 +338,10 @@ def _render_mapping_component(vendor):
     if vendor_form_df is not None:
         vendor_columns = [str(c) for c in vendor_form_df.columns]
 
-    # 원본 칼럼: 세션에 저장된 것 또는 기존 매핑에서 추출
+    # 원본 칼럼: 세션에 저장된 것 또는 기본 원본 칼럼 사용
     source_col_key = f"_mapper_source_cols_{vendor_id}"
     if source_col_key not in st.session_state:
-        st.session_state[source_col_key] = sorted(set(rename_map.keys()))
+        st.session_state[source_col_key] = list(DEFAULT_SOURCE_COLUMNS)
     source_columns = st.session_state[source_col_key]
 
     # 기존 매핑 정보
