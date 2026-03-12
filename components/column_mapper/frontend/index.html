@@ -293,31 +293,6 @@
       border-color: #2196F3;
     }
 
-    /* ── SVG 연결선 영역 ── */
-    .svg-area {
-      width: 60px;
-      min-width: 60px;
-      flex-shrink: 0;
-      position: relative;
-      overflow: hidden;
-      align-self: stretch;
-    }
-
-    .svg-area svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .svg-area svg path {
-      fill: none;
-      stroke: #4CAF50;
-      stroke-width: 2;
-      opacity: 0.6;
-    }
 
     /* ── 하단 버튼 ── */
     .button-row {
@@ -427,10 +402,6 @@
         <div class="column-list" id="sourceList">
           <div class="empty-msg">원본 파일을 업로드하세요</div>
         </div>
-      </div>
-
-      <div class="svg-area" id="svgArea">
-        <svg id="connectorSvg"></svg>
       </div>
 
       <div class="column-panel" id="targetPanel">
@@ -579,7 +550,7 @@
           zone.classList.remove("has-file");
           renderUploadZone(zoneId, "", side);
           renderColumns();
-          updateConnectors();
+
           updateStats();
           setupUploadZone(zoneId, side === "source" ? "sourceFileInput" : "targetFileInput", side);
         });
@@ -730,7 +701,7 @@
             });
             mappings[tgtCol] = { type: "rename", value: srcCol };
             renderColumns();
-            updateConnectors();
+  
             updateStats();
           }
         });
@@ -742,7 +713,7 @@
           const tgtCol = el.dataset.target;
           delete mappings[tgtCol];
           renderColumns();
-          updateConnectors();
+
           updateStats();
         });
       });
@@ -761,7 +732,7 @@
             mappings[tgtCol] = { type: "copy", value: others[0] || "" };
           }
           renderColumns();
-          updateConnectors();
+
           updateStats();
         });
       });
@@ -788,67 +759,6 @@
       });
     }
 
-    // ── SVG 연결선 ──
-    function updateConnectors() {
-      const svg = document.getElementById("connectorSvg");
-      const svgArea = document.getElementById("svgArea");
-      const sourceList = document.getElementById("sourceList");
-      const targetList = document.getElementById("targetList");
-
-      if (!sourceColumns.length || !targetColumns.length) {
-        svg.innerHTML = "";
-        return;
-      }
-
-      // SVG viewBox를 실제 렌더된 높이에 맞춤 (CSS stretch로 패널과 동일)
-      const areaH = svgArea.offsetHeight;
-      svg.setAttribute("viewBox", "0 0 60 " + areaH);
-
-      let paths = "";
-      const sourceItems = sourceList.querySelectorAll(".column-item");
-      const targetItems = targetList.querySelectorAll(".target-item");
-
-      const sourceMap = {};
-      sourceItems.forEach((el) => {
-        sourceMap[el.dataset.col] = el;
-      });
-
-      const targetMap = {};
-      targetItems.forEach((el) => {
-        targetMap[el.dataset.col] = el;
-      });
-
-      // 스크롤 컨테이너의 보이는 영역 경계
-      const srcListRect = sourceList.getBoundingClientRect();
-      const tgtListRect = targetList.getBoundingClientRect();
-      const svgRect = svgArea.getBoundingClientRect();
-
-      Object.entries(mappings).forEach(([tgtCol, m]) => {
-        if (m.type !== "rename") return;
-        const srcEl = sourceMap[m.value];
-        const tgtEl = targetMap[tgtCol];
-        if (!srcEl || !tgtEl) return;
-
-        const srcRect = srcEl.getBoundingClientRect();
-        const tgtRect = tgtEl.getBoundingClientRect();
-
-        // 양쪽 다 스크롤 밖이면 건너뛰기
-        const srcVisible = srcRect.bottom > srcListRect.top && srcRect.top < srcListRect.bottom;
-        const tgtVisible = tgtRect.bottom > tgtListRect.top && tgtRect.top < tgtListRect.bottom;
-        if (!srcVisible && !tgtVisible) return;
-
-        const y1 = srcRect.top + srcRect.height / 2 - svgRect.top;
-        const y2 = tgtRect.top + tgtRect.height / 2 - svgRect.top;
-
-        // 보이는 영역 내로 클램프
-        const clampY1 = Math.max(0, Math.min(areaH, y1));
-        const clampY2 = Math.max(0, Math.min(areaH, y2));
-
-        paths += '<path d="M 0 ' + clampY1 + ' C 30 ' + clampY1 + ', 30 ' + clampY2 + ', 60 ' + clampY2 + '" />';
-      });
-
-      svg.innerHTML = paths;
-    }
 
     // ── 통계 ──
     function updateStats() {
@@ -899,7 +809,6 @@
       document.getElementById("btnReset").addEventListener("click", () => {
         mappings = {};
         renderColumns();
-        updateConnectors();
         updateStats();
         setComponentValue({ action: "reset" });
         showStatus("매핑이 초기화되었습니다", true);
@@ -998,7 +907,6 @@
       }
 
       renderColumns();
-      updateConnectors();
       updateStats();
     }
 
@@ -1007,9 +915,6 @@
     setupUploadZone("targetUpload", "targetFileInput", "target");
     setupButtons();
 
-    // 스크롤 시 연결선 갱신
-    document.getElementById("sourceList").addEventListener("scroll", () => updateConnectors());
-    document.getElementById("targetList").addEventListener("scroll", () => updateConnectors());
 
     window.addEventListener("message", (event) => {
       if (event.data.type === "streamlit:render") {
