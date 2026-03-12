@@ -16,6 +16,7 @@ from map import (
     get_copy_map,
     get_split_config,
     get_nh_list,
+    get_all_vendors,
     load_user_config,
 )
 from customize_file import get_customize_config, apply_customization
@@ -74,13 +75,18 @@ def create_sort_info_file(raw_df):
     # nh_id 초기화
     df_with_sort['nh_id'] = -1
 
-    # 업체명 매핑 (sort_data와 동일한 로직)
-    for i, name in enumerate(current_nh_list):
-        df_with_sort.loc[df_with_sort['상품약어'].str.contains(name, na=False, regex=False), 'nh_id'] = i
+    # 키워드 기반 업체 매핑 (sort_data와 동일한 로직)
+    vendors = get_all_vendors()
+    vendor_id_to_name = {v["id"]: v["name"] for v in vendors}
+    for vendor in vendors:
+        vid = vendor["id"]
+        keywords = vendor.get("keywords", [vendor["name"]])
+        for keyword in keywords:
+            df_with_sort.loc[df_with_sort['상품약어'].str.contains(keyword, na=False, regex=False), 'nh_id'] = vid
 
     # sort_value 칼럼 생성
     df_with_sort['sort_value'] = df_with_sort['nh_id'].apply(
-        lambda x: current_nh_list[int(x)] if x != -1 and int(x) < len(current_nh_list) else "분류되지 않음"
+        lambda x: vendor_id_to_name.get(int(x), "분류되지 않음") if x != -1 else "분류되지 않음"
     )
 
     # nh_id 칼럼 제거 (임시로만 사용)

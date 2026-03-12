@@ -13,6 +13,20 @@
 - `streamlit-deploy.report.md` - 기존 배포 보고서
 - `streamlit-deploy-security.report.md` - 보안 조치 완료 보고서 (PDCA)
 
+## 365배포 (GitHub 동기화를 통한 Streamlit Cloud 설정 영속화)
+
+| 항목 | 값 |
+|------|-----|
+| Feature | 365배포 (GitHub 동기화) |
+| 완료일 | 2026-03-12 |
+| Match Rate | 100% |
+| Phase | completed → archived |
+
+### 문서 목록
+- `365배포.report.md` - 완료 보고서
+
+---
+
 ## mapping-tab-renewal (매핑 관리 탭 리뉴얼)
 
 | 항목 | 값 |

@@ -80,6 +80,14 @@ def _save_form_file_from_bytes(file_bytes, vendor_name, original_filename):
         try:
             with open(filepath, "wb") as f:
                 f.write(file_bytes)
+            # GitHub 자동 커밋 (Streamlit Cloud 재배포 시 양식 파일 영속화)
+            try:
+                from github_sync import commit_file
+                from map import _BASE_DIR
+                rel_path = os.path.relpath(filepath, _BASE_DIR).replace("\\", "/")
+                commit_file(rel_path, file_bytes, f"auto: upload form {filename}")
+            except Exception as e:
+                logger.warning(f"GitHub 동기화 실패 (양식 파일 저장은 완료): {e}")
             return filename
         except PermissionError:
             if attempt < 2:

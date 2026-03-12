@@ -67,6 +67,13 @@ def _save_config(config=None, config_path=None):
             json.dump(save_config, tmp, ensure_ascii=False, indent=2)
             tmp_path = tmp.name
         shutil.move(tmp_path, save_path)
+        # GitHub 자동 커밋 (Streamlit Cloud 재배포 시 설정 영속화)
+        try:
+            from github_sync import commit_json
+            rel_path = os.path.relpath(save_path, _BASE_DIR).replace("\\", "/")
+            commit_json(rel_path, save_config, f"auto: update {os.path.basename(save_path)}")
+        except Exception as e:
+            logger.warning(f"GitHub 동기화 실패 (설정 저장은 완료): {e}")
     except Exception as e:
         logger.error(f"설정 파일 저장 실패: {e}")
         try:
