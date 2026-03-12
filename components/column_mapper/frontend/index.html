@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Source Sans Pro", sans-serif;
+      font-size: 14px;
+      color: #262730;
+      background: transparent;
+    }
+
+    .mapper-container {
+      padding: 8px 0;
+    }
+
+    /* ── 상단 파일 업로드 영역 ── */
+    .upload-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .upload-zone {
+      flex: 1;
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .upload-zone:hover {
+      border-color: #2196F3;
+      background: #E3F2FD;
+    }
+
+    .upload-zone.drag-over {
+      border-color: #4CAF50;
+      background: #E8F5E9;
+      border-style: solid;
+    }
+
+    .upload-zone.has-file {
+      border-color: #4CAF50;
+      border-style: solid;
+      background: #F1F8E9;
+      cursor: default;
+    }
+
+    .upload-zone .upload-icon {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .upload-zone .upload-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 2px;
+    }
+
+    .upload-zone .upload-hint {
+      font-size: 11px;
+      color: #999;
+    }
+
+    .upload-zone .file-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2E7D32;
+    }
+
+    .upload-zone .file-remove {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #999;
+      line-height: 1;
+    }
+
+    .upload-zone .file-remove:hover {
+      color: #E53935;
+    }
+
+    .upload-zone input[type="file"] {
+      display: none;
+    }
+
+    /* ── 매핑 영역 ── */
+    .mapping-area {
+      display: flex;
+      gap: 0;
+      align-items: flex-start;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .column-panel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .column-panel-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      padding: 8px 12px;
+      background: #f0f2f6;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid #e0e0e0;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .column-list {
+      border: 1px solid #e0e0e0;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .column-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: grab;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      user-select: none;
+    }
+
+    .column-item:last-child {
+      border-bottom: none;
+    }
+
+    .column-item:hover {
+      background: #f5f7fa;
+    }
+
+    .column-item.dragging {
+      opacity: 0.4;
+      background: #E3F2FD;
+    }
+
+    .column-item.mapped {
+      background: #F1F8E9;
+    }
+
+    .column-item .col-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .column-item .col-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .col-badge.used {
+      background: #C8E6C9;
+      color: #2E7D32;
+    }
+
+    .col-badge.unused {
+      background: #F5F5F5;
+      color: #9E9E9E;
+    }
+
+    /* ── 타겟 칼럼 (드롭 대상) ── */
+    .target-item {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      min-height: 42px;
+    }
+
+    .target-item:last-child {
+      border-bottom: none;
+    }
+
+    .target-item.drop-hover {
+      background: #E3F2FD;
+      border-left: 3px solid #2196F3;
+    }
+
+    .target-item .col-name {
+      min-width: 80px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .target-item .mapping-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .target-item .mapped-source {
+      background: #E8F5E9;
+      border: 1px solid #A5D6A7;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #2E7D32;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mapped-source .remove-mapping {
+      cursor: pointer;
+      font-size: 14px;
+      color: #999;
+      margin-left: 2px;
+      line-height: 1;
+    }
+
+    .mapped-source .remove-mapping:hover {
+      color: #E53935;
+    }
+
+    .target-item .unmapped-label {
+      font-size: 12px;
+      color: #bbb;
+      font-style: italic;
+    }
+
+    /* 특수 매핑 셀렉트 */
+    .special-select {
+      font-size: 12px;
+      padding: 3px 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      max-width: 120px;
+    }
+
+    .special-select:focus {
+      outline: none;
+      border-color: #2196F3;
+    }
+
+    /* 고정값 인풋 */
+    .constant-input {
+      font-size: 12px;
+      padding: 3px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 140px;
+    }
+
+    .constant-input:focus {
+      outline: none;
+      border-color: #2196F3;
+    }
+
+    /* ── SVG 연결선 영역 ── */
+    .svg-area {
+      width: 60px;
+      min-width: 60px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .svg-area svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .svg-area svg path {
+      fill: none;
+      stroke: #4CAF50;
+      stroke-width: 2;
+      opacity: 0.6;
+    }
+
+    /* ── 하단 버튼 ── */
+    .button-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-save {
+      background: #2196F3;
+      color: white;
+    }
+
+    .btn-save:hover {
+      background: #1976D2;
+    }
+
+    .btn-reset {
+      background: #f0f2f6;
+      color: #555;
+    }
+
+    .btn-reset:hover {
+      background: #e0e0e0;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── 빈 상태 ── */
+    .empty-msg {
+      text-align: center;
+      padding: 30px;
+      color: #aaa;
+      font-size: 13px;
+    }
+
+    /* ── 상태 메시지 ── */
+    .status-msg {
+      display: none;
+      padding: 8px 12px;
+      margin-top: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .status-msg.success {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .status-msg.error {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+
+    /* ── 매핑 카운트 ── */
+    .mapping-stats {
+      font-size: 12px;
+      color: #777;
+      text-align: right;
+      padding: 6px 0;
+    }
+
+    .mapping-stats strong {
+      color: #2E7D32;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="mapper-container" id="root">
+    <!-- 상단: 파일 업로드 -->
+    <div class="upload-row">
+      <div class="upload-zone" id="sourceUpload">
+        <div class="upload-icon">📄</div>
+        <div class="upload-label">원본 파일 드래그 앤 드롭</div>
+        <div class="upload-hint">또는 클릭하여 선택 (.xlsx / .xls)</div>
+        <input type="file" accept=".xlsx,.xls" id="sourceFileInput" />
+      </div>
+      <div class="upload-zone" id="targetUpload">
+        <div class="upload-icon">📄</div>
+        <div class="upload-label">농협 양식 드래그 앤 드롭</div>
+        <div class="upload-hint">또는 클릭하여 선택 (.xlsx / .xls)</div>
+        <input type="file" accept=".xlsx,.xls" id="targetFileInput" />
+      </div>
+    </div>
+
+    <!-- 중앙: 칼럼 매핑 -->
+    <div class="mapping-area" id="mappingArea">
+      <div class="column-panel" id="sourcePanel">
+        <div class="column-panel-header">원본 칼럼</div>
+        <div class="column-list" id="sourceList">
+          <div class="empty-msg">원본 파일을 업로드하세요</div>
+        </div>
+      </div>
+
+      <div class="svg-area" id="svgArea">
+        <svg id="connectorSvg"></svg>
+      </div>
+
+      <div class="column-panel" id="targetPanel">
+        <div class="column-panel-header">업체 칼럼</div>
+        <div class="column-list" id="targetList">
+          <div class="empty-msg">업체 양식을 업로드하세요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 매핑 통계 -->
+    <div class="mapping-stats" id="mappingStats"></div>
+
+    <!-- 하단: 버튼 -->
+    <div class="button-row">
+      <button class="btn btn-save" id="btnSave" disabled>매핑 저장</button>
+      <button class="btn btn-reset" id="btnReset">매핑 초기화</button>
+    </div>
+
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <script>
+    // ── Streamlit 통신 ──
+    function sendToStreamlit(type, data) {
+      window.parent.postMessage(
+        Object.assign({ isStreamlitMessage: true, type: type }, data),
+        "*"
+      );
+    }
+
+    function setComponentValue(val) {
+      sendToStreamlit("streamlit:setComponentValue", { value: val });
+    }
+
+    function setFrameHeight(h) {
+      sendToStreamlit("streamlit:setFrameHeight", { height: h });
+    }
+
+    // ── 상태 ──
+    let initialized = false;
+    let vendorName = "";
+    let vendorId = null;
+    let sourceColumns = [];
+    let targetColumns = [];
+    let mappings = {};          // {targetCol: {type:"rename"|"constant"|"copy", value:"원본칼럼"}}
+    let sourceFileName = "";
+    let targetFileName = "";
+    let dragItem = null;
+    let pendingSourceFile = null;
+    let pendingTargetFile = null;
+
+    // ── 파일 업로드 처리 ──
+    function setupUploadZone(zoneId, inputId, side) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+
+      zone.addEventListener("click", (e) => {
+        if (zone.classList.contains("has-file")) return;
+        input.click();
+      });
+
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!zone.classList.contains("has-file")) {
+          zone.classList.add("drag-over");
+        }
+      });
+
+      zone.addEventListener("dragleave", () => {
+        zone.classList.remove("drag-over");
+      });
+
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("drag-over");
+        if (zone.classList.contains("has-file")) return;
+        const files = e.dataTransfer.files;
+        if (files.length > 0) handleFile(files[0], side);
+      });
+
+      input.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0], side);
+        e.target.value = "";
+      });
+    }
+
+    function handleFile(file, side) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!["xlsx", "xls"].includes(ext)) {
+        showStatus("Excel 파일만 업로드 가능합니다 (.xlsx / .xls)", false);
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showStatus("파일 크기가 10MB를 초과합니다", false);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target.result.split(",")[1];
+        const fileData = { name: file.name, data: base64 };
+
+        if (side === "source") {
+          pendingSourceFile = fileData;
+          sourceFileName = file.name;
+          renderUploadZone("sourceUpload", sourceFileName, "source");
+        } else {
+          pendingTargetFile = fileData;
+          targetFileName = file.name;
+          renderUploadZone("targetUpload", targetFileName, "target");
+        }
+
+        // Python으로 전송하여 칼럼 추출
+        setComponentValue({
+          action: side === "source" ? "upload_source" : "upload_target",
+          source_file: side === "source" ? fileData : null,
+          target_file: side === "target" ? fileData : null,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderUploadZone(zoneId, fileName, side) {
+      const zone = document.getElementById(zoneId);
+      if (fileName) {
+        zone.classList.add("has-file");
+        zone.innerHTML =
+          '<div class="upload-icon">✅</div>' +
+          '<div class="file-name">' + escapeHtml(fileName) + '</div>' +
+          '<button class="file-remove" data-side="' + side + '">✕</button>' +
+          '<input type="file" accept=".xlsx,.xls" id="' + (side === "source" ? "sourceFileInput" : "targetFileInput") + '" />';
+
+        zone.querySelector(".file-remove").addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (side === "source") {
+            pendingSourceFile = null;
+            sourceFileName = "";
+            sourceColumns = [];
+          } else {
+            pendingTargetFile = null;
+            targetFileName = "";
+            targetColumns = [];
+          }
+          mappings = {};
+          zone.classList.remove("has-file");
+          renderUploadZone(zoneId, "", side);
+          renderColumns();
+          updateConnectors();
+          updateStats();
+          setupUploadZone(zoneId, side === "source" ? "sourceFileInput" : "targetFileInput", side);
+        });
+      } else {
+        zone.classList.remove("has-file");
+        const label = side === "source" ? "원본 파일 드래그 앤 드롭" : "농협 양식 드래그 앤 드롭";
+        zone.innerHTML =
+          '<div class="upload-icon">📄</div>' +
+          '<div class="upload-label">' + label + '</div>' +
+          '<div class="upload-hint">또는 클릭하여 선택 (.xlsx / .xls)</div>' +
+          '<input type="file" accept=".xlsx,.xls" id="' + (side === "source" ? "sourceFileInput" : "targetFileInput") + '" />';
+        setupUploadZone(zoneId, side === "source" ? "sourceFileInput" : "targetFileInput", side);
+      }
+    }
+
+    // ── 칼럼 렌더링 ──
+    function renderColumns() {
+      renderSourceColumns();
+      renderTargetColumns();
+      updateFrameHeight();
+    }
+
+    function getMappedSourceCols() {
+      const used = new Set();
+      Object.values(mappings).forEach((m) => {
+        if (m.type === "rename") used.add(m.value);
+      });
+      return used;
+    }
+
+    function renderSourceColumns() {
+      const list = document.getElementById("sourceList");
+      if (!sourceColumns.length) {
+        list.innerHTML = '<div class="empty-msg">원본 파일을 업로드하세요</div>';
+        return;
+      }
+
+      const used = getMappedSourceCols();
+      let html = "";
+      sourceColumns.forEach((col, i) => {
+        const isUsed = used.has(col);
+        const badgeClass = isUsed ? "used" : "unused";
+        const badgeText = isUsed ? "매핑됨" : "";
+        html +=
+          '<div class="column-item' + (isUsed ? " mapped" : "") + '" draggable="true" data-col="' + escapeAttr(col) + '" data-idx="' + i + '">' +
+          '  <span class="col-name">' + escapeHtml(col) + '</span>' +
+          (badgeText ? '  <span class="col-badge ' + badgeClass + '">' + badgeText + '</span>' : '') +
+          '</div>';
+      });
+      list.innerHTML = html;
+
+      // 드래그 이벤트
+      list.querySelectorAll(".column-item").forEach((el) => {
+        el.addEventListener("dragstart", (e) => {
+          dragItem = e.target.dataset.col;
+          e.target.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "link";
+          e.dataTransfer.setData("text/plain", dragItem);
+        });
+        el.addEventListener("dragend", (e) => {
+          e.target.classList.remove("dragging");
+          dragItem = null;
+          // 모든 드롭 하이라이트 제거
+          document.querySelectorAll(".target-item.drop-hover").forEach((t) => t.classList.remove("drop-hover"));
+        });
+      });
+    }
+
+    function renderTargetColumns() {
+      const list = document.getElementById("targetList");
+      if (!targetColumns.length) {
+        list.innerHTML = '<div class="empty-msg">업체 양식을 업로드하세요</div>';
+        return;
+      }
+
+      let html = "";
+      targetColumns.forEach((col, i) => {
+        const mapping = mappings[col];
+        let mappingHtml = "";
+
+        if (mapping) {
+          if (mapping.type === "rename") {
+            mappingHtml =
+              '<span class="mapped-source">' +
+              '  ← ' + escapeHtml(mapping.value) +
+              '  <span class="remove-mapping" data-target="' + escapeAttr(col) + '">✕</span>' +
+              '</span>';
+          } else if (mapping.type === "constant") {
+            mappingHtml =
+              '<select class="special-select" data-target="' + escapeAttr(col) + '" data-idx="' + i + '">' +
+              '  <option value="constant" selected>고정값</option>' +
+              '  <option value="copy">칼럼 복사</option>' +
+              '  <option value="unmapped">미매핑</option>' +
+              '</select>' +
+              '<input class="constant-input" type="text" value="' + escapeAttr(mapping.value) + '" ' +
+              '  placeholder="고정값 입력" data-target="' + escapeAttr(col) + '" />';
+          } else if (mapping.type === "copy") {
+            const opts = targetColumns.filter((c) => c !== col).map((c) =>
+              '<option value="' + escapeAttr(c) + '"' + (c === mapping.value ? " selected" : "") + '>' + escapeHtml(c) + '</option>'
+            ).join("");
+            mappingHtml =
+              '<select class="special-select" data-target="' + escapeAttr(col) + '" data-idx="' + i + '">' +
+              '  <option value="constant">고정값</option>' +
+              '  <option value="copy" selected>칼럼 복사</option>' +
+              '  <option value="unmapped">미매핑</option>' +
+              '</select>' +
+              '<select class="special-select" data-target="' + escapeAttr(col) + '" data-copy-src="true">' + opts + '</select>';
+          }
+        } else {
+          mappingHtml =
+            '<select class="special-select" data-target="' + escapeAttr(col) + '" data-idx="' + i + '">' +
+            '  <option value="unmapped" selected>미매핑</option>' +
+            '  <option value="constant">고정값</option>' +
+            '  <option value="copy">칼럼 복사</option>' +
+            '</select>' +
+            '<span class="unmapped-label">드래그하여 매핑</span>';
+        }
+
+        html +=
+          '<div class="target-item" data-col="' + escapeAttr(col) + '" data-idx="' + i + '">' +
+          '  <span class="col-name">' + escapeHtml(col) + '</span>' +
+          '  <div class="mapping-info">' + mappingHtml + '</div>' +
+          '</div>';
+      });
+      list.innerHTML = html;
+
+      // 드롭 이벤트
+      list.querySelectorAll(".target-item").forEach((el) => {
+        el.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "link";
+          el.classList.add("drop-hover");
+        });
+        el.addEventListener("dragleave", () => {
+          el.classList.remove("drop-hover");
+        });
+        el.addEventListener("drop", (e) => {
+          e.preventDefault();
+          el.classList.remove("drop-hover");
+          const srcCol = e.dataTransfer.getData("text/plain");
+          const tgtCol = el.dataset.col;
+          if (srcCol && tgtCol) {
+            // 기존에 이 원본 칼럼이 다른 곳에 매핑되어 있으면 해제
+            Object.keys(mappings).forEach((k) => {
+              if (mappings[k].type === "rename" && mappings[k].value === srcCol) {
+                delete mappings[k];
+              }
+            });
+            mappings[tgtCol] = { type: "rename", value: srcCol };
+            renderColumns();
+            updateConnectors();
+            updateStats();
+          }
+        });
+      });
+
+      // 매핑 해제 버튼
+      list.querySelectorAll(".remove-mapping").forEach((el) => {
+        el.addEventListener("click", () => {
+          const tgtCol = el.dataset.target;
+          delete mappings[tgtCol];
+          renderColumns();
+          updateConnectors();
+          updateStats();
+        });
+      });
+
+      // 특수 매핑 셀렉트
+      list.querySelectorAll(".special-select:not([data-copy-src])").forEach((sel) => {
+        sel.addEventListener("change", (e) => {
+          const tgtCol = e.target.dataset.target;
+          const val = e.target.value;
+          if (val === "unmapped") {
+            delete mappings[tgtCol];
+          } else if (val === "constant") {
+            mappings[tgtCol] = { type: "constant", value: "" };
+          } else if (val === "copy") {
+            const others = targetColumns.filter((c) => c !== tgtCol);
+            mappings[tgtCol] = { type: "copy", value: others[0] || "" };
+          }
+          renderColumns();
+          updateConnectors();
+          updateStats();
+        });
+      });
+
+      // 고정값 입력
+      list.querySelectorAll(".constant-input").forEach((inp) => {
+        inp.addEventListener("input", (e) => {
+          const tgtCol = e.target.dataset.target;
+          if (mappings[tgtCol]) {
+            mappings[tgtCol].value = e.target.value;
+          }
+          updateStats();
+        });
+      });
+
+      // 복사 원본 셀렉트
+      list.querySelectorAll("[data-copy-src]").forEach((sel) => {
+        sel.addEventListener("change", (e) => {
+          const tgtCol = e.target.dataset.target;
+          if (mappings[tgtCol]) {
+            mappings[tgtCol].value = e.target.value;
+          }
+        });
+      });
+    }
+
+    // ── SVG 연결선 ──
+    function updateConnectors() {
+      const svg = document.getElementById("connectorSvg");
+      const svgArea = document.getElementById("svgArea");
+      const sourceList = document.getElementById("sourceList");
+      const targetList = document.getElementById("targetList");
+
+      if (!sourceColumns.length || !targetColumns.length) {
+        svg.innerHTML = "";
+        return;
+      }
+
+      // SVG 높이를 매핑 영역에 맞춤
+      const areaRect = document.getElementById("mappingArea").getBoundingClientRect();
+      const headerH = 37; // column-panel-header 높이
+      svgArea.style.height = Math.max(sourceList.scrollHeight, targetList.scrollHeight) + headerH + "px";
+      svg.setAttribute("viewBox", "0 0 60 " + svgArea.offsetHeight);
+
+      let paths = "";
+      const sourceItems = sourceList.querySelectorAll(".column-item");
+      const targetItems = targetList.querySelectorAll(".target-item");
+
+      const sourceMap = {};
+      sourceItems.forEach((el) => {
+        sourceMap[el.dataset.col] = el;
+      });
+
+      const targetMap = {};
+      targetItems.forEach((el) => {
+        targetMap[el.dataset.col] = el;
+      });
+
+      Object.entries(mappings).forEach(([tgtCol, m]) => {
+        if (m.type !== "rename") return;
+        const srcEl = sourceMap[m.value];
+        const tgtEl = targetMap[tgtCol];
+        if (!srcEl || !tgtEl) return;
+
+        const srcRect = srcEl.getBoundingClientRect();
+        const tgtRect = tgtEl.getBoundingClientRect();
+        const svgRect = svgArea.getBoundingClientRect();
+
+        const y1 = srcRect.top + srcRect.height / 2 - svgRect.top;
+        const y2 = tgtRect.top + tgtRect.height / 2 - svgRect.top;
+
+        paths += '<path d="M 0 ' + y1 + ' C 30 ' + y1 + ', 30 ' + y2 + ', 60 ' + y2 + '" />';
+      });
+
+      svg.innerHTML = paths;
+    }
+
+    // ── 통계 ──
+    function updateStats() {
+      const el = document.getElementById("mappingStats");
+      if (!targetColumns.length) {
+        el.textContent = "";
+        return;
+      }
+      const total = targetColumns.length;
+      const mapped = Object.keys(mappings).length;
+      el.innerHTML = "매핑: <strong>" + mapped + "</strong> / " + total + " 칼럼";
+
+      // 저장 버튼 활성화
+      document.getElementById("btnSave").disabled = mapped === 0;
+    }
+
+    // ── 버튼 ──
+    function setupButtons() {
+      document.getElementById("btnSave").addEventListener("click", () => {
+        const renameMap = {};
+        const constantValues = {};
+        const copyMap = {};
+
+        Object.entries(mappings).forEach(([tgtCol, m]) => {
+          if (m.type === "rename") {
+            renameMap[m.value] = tgtCol;
+          } else if (m.type === "constant" && m.value) {
+            constantValues[tgtCol] = m.value;
+          } else if (m.type === "copy" && m.value) {
+            copyMap[m.value] = tgtCol;
+          }
+        });
+
+        setComponentValue({
+          action: "save",
+          mapping: {
+            rename_map: renameMap,
+            constant_values: constantValues,
+            copy_map: copyMap,
+          },
+          source_file: pendingSourceFile,
+          target_file: pendingTargetFile,
+        });
+
+        showStatus("매핑이 저장되었습니다!", true);
+      });
+
+      document.getElementById("btnReset").addEventListener("click", () => {
+        mappings = {};
+        renderColumns();
+        updateConnectors();
+        updateStats();
+        setComponentValue({ action: "reset" });
+        showStatus("매핑이 초기화되었습니다", true);
+      });
+    }
+
+    // ── 유틸 ──
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function escapeAttr(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function showStatus(msg, isSuccess) {
+      const el = document.getElementById("statusMsg");
+      el.textContent = msg;
+      el.className = "status-msg " + (isSuccess ? "success" : "error");
+      el.style.display = "block";
+      setTimeout(() => { el.style.display = "none"; }, 3000);
+    }
+
+    function updateFrameHeight() {
+      requestAnimationFrame(() => {
+        const root = document.getElementById("root");
+        setFrameHeight(root.scrollHeight + 20);
+      });
+    }
+
+    // ── 기존 매핑 복원 ──
+    function restoreMappings(existing) {
+      if (!existing) return;
+      const rm = existing.rename_map || {};
+      const cv = existing.constant_values || {};
+      const cm = existing.copy_map || {};
+
+      // rename_map: {sourceCol: targetCol}
+      Object.entries(rm).forEach(([src, tgt]) => {
+        if (targetColumns.includes(tgt)) {
+          mappings[tgt] = { type: "rename", value: src };
+        }
+      });
+
+      // constant_values: {targetCol: value}
+      Object.entries(cv).forEach(([tgt, val]) => {
+        if (targetColumns.includes(tgt)) {
+          mappings[tgt] = { type: "constant", value: val };
+        }
+      });
+
+      // copy_map: {sourceCol: targetCol}
+      Object.entries(cm).forEach(([src, tgt]) => {
+        if (targetColumns.includes(tgt)) {
+          mappings[tgt] = { type: "copy", value: src };
+        }
+      });
+    }
+
+    // ── Streamlit 이벤트 핸들러 ──
+    function onRender(event) {
+      if (!event.detail) return;
+      const args = event.detail.args;
+
+      vendorName = args.vendor_name || "";
+      vendorId = args.vendor_id;
+
+      const newSourceCols = args.source_columns || [];
+      const newTargetCols = args.target_columns || [];
+      const newSourceFile = args.source_file_name || "";
+      const newTargetFile = args.target_file_name || "";
+
+      // 칼럼이 변경되었는지 확인
+      const sourceChanged = JSON.stringify(newSourceCols) !== JSON.stringify(sourceColumns);
+      const targetChanged = JSON.stringify(newTargetCols) !== JSON.stringify(targetColumns);
+
+      if (sourceChanged) sourceColumns = newSourceCols;
+      if (targetChanged) targetColumns = newTargetCols;
+
+      // 파일명 갱신
+      if (newSourceFile && !sourceFileName) {
+        sourceFileName = newSourceFile;
+        renderUploadZone("sourceUpload", sourceFileName, "source");
+      }
+      if (newTargetFile && !targetFileName) {
+        targetFileName = newTargetFile;
+        renderUploadZone("targetUpload", targetFileName, "target");
+      }
+
+      // 초기화 시 기존 매핑 복원
+      if (!initialized) {
+        restoreMappings(args.existing_mapping);
+        initialized = true;
+      }
+
+      renderColumns();
+      updateConnectors();
+      updateStats();
+    }
+
+    // ── 초기화 ──
+    setupUploadZone("sourceUpload", "sourceFileInput", "source");
+    setupUploadZone("targetUpload", "targetFileInput", "target");
+    setupButtons();
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "streamlit:render") {
+        onRender({ detail: { args: event.data.args } });
+      }
+    });
+
+    // ResizeObserver로 높이 자동 조절
+    new ResizeObserver(() => updateFrameHeight()).observe(document.getElementById("root"));
+
+    sendToStreamlit("streamlit:componentReady", { apiVersion: 1 });
+    setFrameHeight(250);
+  </script>
+</body>
+
+</html>

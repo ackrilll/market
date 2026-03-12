@@ -2,7 +2,7 @@
 주문 변환 매핑 탭 (order_mapping.py)
 
 업체 리스트를 먼저 보여주고, 업체를 클릭하면 해당 업체의 매핑 정보를
-조회/등록/수정할 수 있는 UI를 제공합니다.
+드래그 앤 드롭 UI로 조회/등록/수정할 수 있습니다.
 분류 기준 칼럼 설정은 상단 expander로 분리되어 있습니다.
 """
 import streamlit as st
@@ -11,6 +11,7 @@ import json
 import os
 import io
 import re
+import base64
 import logging
 from map import (
     get_all_vendors,
@@ -21,6 +22,7 @@ from map import (
     _FORM_DIR,
     _BASE_DIR,
 )
+from components.column_mapper import column_mapper
 
 logger = logging.getLogger(__name__)
 
@@ -240,81 +242,77 @@ def _render_vendor_list_and_detail(vendors):
         if is_selected:
             with st.container(border=True):
                 st.markdown(f"#### {vendor['name']} 매핑 상세")
-                _render_mapping_view(vendor)
+                _render_mapping_component(vendor)
 
 
-# ────────────────────────────── 매핑 통합 뷰 (조회+수정) ──────────────────────────────
-
-_SPECIAL_UNMAPPED = "(미매핑)"
-_SPECIAL_CONSTANT = "고정값 입력"
-_SPECIAL_COPY = "다른 칼럼 복사"
+# ────────────────────────────── D&D 매핑 컴포넌트 통합 ──────────────────────────────
 
 
-def _render_form_upload(vendor):
-    """업체 양식 파일 업로드 UI를 렌더링합니다."""
-    vendor_name = vendor["name"]
-    vendor_id = vendor["id"]
+def _save_uploaded_file(file_data, vendor_name, side):
+    """base64 파일 데이터를 저장하고 칼럼을 추출합니다.
 
-    uploaded = st.file_uploader(
-        "양식 파일 업로드 (.xlsx / .xls)",
-        type=["xlsx", "xls"],
-        key=f"form_upload_{vendor_id}",
-    )
+    Args:
+        file_data: {"name": str, "data": base64_str}
+        vendor_name: 업체명
+        side: "source" 또는 "target"
 
-    if uploaded is not None:
-        try:
-            file_bytes = uploaded.read()
-            # 파일 검증
-            if len(file_bytes) > 10 * 1024 * 1024:
-                st.error("파일 크기가 10MB를 초과합니다.")
-                return
-            pd.read_excel(io.BytesIO(file_bytes), nrows=0)
+    Returns:
+        (columns, filename) 또는 ([], None)
+    """
+    if not file_data or not file_data.get("data"):
+        return [], None
 
-            # 저장
+    try:
+        raw = base64.b64decode(file_data["data"])
+        original_name = file_data["name"]
+
+        # 파일 크기 검증
+        if len(raw) > 10 * 1024 * 1024:
+            st.error("파일 크기가 10MB를 초과합니다.")
+            return [], None
+
+        # Excel 검증 + 칼럼 추출
+        df = pd.read_excel(io.BytesIO(raw), nrows=5)
+        columns = [str(c) for c in df.columns]
+
+        if side == "target":
+            # 업체 양식 파일 저장
             os.makedirs(_FORM_DIR, exist_ok=True)
-            ext = os.path.splitext(uploaded.name)[1].lower()
+            ext = os.path.splitext(original_name)[1].lower()
             safe_name = re.sub(r'[^\w\s\-()]', '', vendor_name).strip()
             if not safe_name:
                 st.error("유효하지 않은 업체명입니다.")
-                return
+                return columns, None
             filename = f"{safe_name}{ext}"
             filepath = os.path.join(_FORM_DIR, filename)
 
             if not os.path.realpath(filepath).startswith(os.path.realpath(_FORM_DIR)):
                 st.error("잘못된 파일 경로입니다.")
-                return
+                return columns, None
 
             with open(filepath, "wb") as f:
-                f.write(file_bytes)
-
-            # 칼럼 추출
-            cols = list(pd.read_excel(io.BytesIO(file_bytes), nrows=5).columns)
-
-            # vendor config 업데이트
-            updates = {"form_file": filename}
-            if cols:
-                updates["target_columns"] = [str(c) for c in cols]
-            update_vendor_in_config(vendor_id, updates)
-            reload_config()
+                f.write(raw)
 
             # GitHub 동기화
             try:
                 from github_sync import commit_file
                 rel_path = os.path.relpath(filepath, _BASE_DIR).replace("\\", "/")
-                commit_file(rel_path, file_bytes, f"auto: upload form {filename}")
+                commit_file(rel_path, raw, f"auto: upload form {filename}")
             except Exception as e:
                 logger.warning(f"GitHub 동기화 실패 (양식 파일 저장은 완료): {e}")
 
-            st.success(f"양식 파일 '{filename}'이 등록되었습니다.")
-            st.rerun()
-        except pd.errors.EmptyDataError:
-            st.error("빈 파일입니다.")
-        except Exception as e:
-            st.error(f"파일 처리 실패: {e}")
+            return columns, filename
+
+        return columns, original_name
+
+    except Exception as e:
+        logger.error(f"파일 처리 실패: {e}")
+        st.error(f"파일 처리 실패: {e}")
+        return [], None
 
 
-def _render_mapping_view(vendor):
-    """매핑 조회 및 수정 통합 UI — 원본 칼럼을 selectbox로 표시합니다."""
+def _render_mapping_component(vendor):
+    """드래그 앤 드롭 매핑 컴포넌트를 렌더링합니다."""
     vendor_name = vendor["name"]
     vendor_id = vendor["id"]
 
@@ -323,187 +321,116 @@ def _render_mapping_view(vendor):
     copy_map = vendor.get("copy_map", {})
     target_columns = vendor.get("target_columns", [])
 
-    # 업체 칼럼 목록
+    # 업체 칼럼 목록 (양식 파일에서 가져오기)
     vendor_columns = [str(c) for c in target_columns]
     vendor_form_df, _ = _load_vendor_form(vendor_name)
     if vendor_form_df is not None:
         vendor_columns = [str(c) for c in vendor_form_df.columns]
 
-    if not vendor_columns:
-        st.warning(f"'{vendor_name}' 업체의 양식 파일이 없습니다. 양식 파일을 업로드하세요.")
-        _render_form_upload(vendor)
+    # 원본 칼럼: 세션에 저장된 것 또는 기존 매핑에서 추출
+    source_col_key = f"_mapper_source_cols_{vendor_id}"
+    if source_col_key not in st.session_state:
+        st.session_state[source_col_key] = sorted(set(rename_map.keys()))
+    source_columns = st.session_state[source_col_key]
+
+    # 기존 매핑 정보
+    existing_mapping = {
+        "rename_map": rename_map,
+        "constant_values": constant_values,
+        "copy_map": copy_map,
+    }
+
+    # 파일명
+    target_file_name = vendor.get("form_file", "")
+
+    # 컴포넌트 렌더링
+    result = column_mapper(
+        vendor_name=vendor_name,
+        vendor_id=vendor_id,
+        source_columns=source_columns,
+        target_columns=vendor_columns,
+        existing_mapping=existing_mapping,
+        source_file_name="",
+        target_file_name=target_file_name,
+        key=f"column_mapper_{vendor_id}",
+    )
+
+    # ── 컴포넌트 반환값 처리 ──
+    if result is None:
         return
 
-    # 현재 양식 파일 표시 + 변경 가능
-    form_file = vendor.get("form_file", "")
-    if form_file:
-        with st.expander(f"양식 파일: {form_file}", expanded=False):
-            _render_form_upload(vendor)
+    action = result.get("action")
 
-    # 역방향 매핑
-    reverse_rename = {v: k for k, v in rename_map.items()}
-    reverse_copy = {v: k for k, v in copy_map.items()}
+    # 원본 파일 업로드
+    if action == "upload_source":
+        file_data = result.get("source_file")
+        if file_data:
+            columns, _ = _save_uploaded_file(file_data, vendor_name, "source")
+            if columns:
+                st.session_state[source_col_key] = columns
+                st.rerun()
 
-    # 원본 칼럼 옵션 구성 (기존 매핑 + 업체 칼럼명에서 수집)
-    known_sources = set(rename_map.keys()) | set(vendor_columns)
-
-    # 원본 파일 업로드 (optional — 새 칼럼 추가 시)
-    source_file = st.file_uploader(
-        "원본 주문서 업로드 (새 칼럼 추가 시)",
-        type=["xlsx", "xls"],
-        key=f"mapping_source_file_{vendor_id}",
-    )
-    source_name = None
-    if source_file is not None:
-        try:
-            source_file.seek(0)
-            source_df = pd.read_excel(source_file, nrows=5)
-            file_columns = [str(c) for c in source_df.columns]
-            known_sources.update(file_columns)
-            source_name = os.path.splitext(source_file.name)[0]
-        except Exception as e:
-            st.error("파일 읽기에 실패했습니다. 올바른 Excel 파일인지 확인하세요.")
-
-    src_options = [_SPECIAL_UNMAPPED] + sorted(known_sources) + [_SPECIAL_CONSTANT, _SPECIAL_COPY]
-
-    # 칼럼 매핑 selectbox 렌더링
-    st.markdown("#### 칼럼 매핑")
-    st.caption("원본 칼럼을 변경하려면 드롭박스를 클릭하세요.")
-
-    for i, tc in enumerate(vendor_columns):
-        # 현재 매핑 값
-        if tc in reverse_rename:
-            current_value = reverse_rename[tc]
-        elif tc in constant_values:
-            current_value = _SPECIAL_CONSTANT
-        elif tc in reverse_copy:
-            current_value = _SPECIAL_COPY
-        else:
-            current_value = tc if tc in known_sources else _SPECIAL_UNMAPPED
-
-        default_idx = src_options.index(current_value) if current_value in src_options else 0
-
-        col_left, col_right = st.columns([1, 1])
-        with col_left:
-            selected = st.selectbox(
-                "원본 칼럼" if i == 0 else f"원본 칼럼 {i}",
-                options=src_options,
-                index=default_idx,
-                key=f"mapping_select_{vendor_name}_{i}",
-                label_visibility="collapsed" if i > 0 else "visible",
-            )
-        with col_right:
-            st.text_input(
-                "업체 칼럼" if i == 0 else f"업체 칼럼 {i}",
-                value=tc, disabled=True,
-                key=f"target_label_{vendor_name}_{i}",
-                label_visibility="collapsed" if i > 0 else "visible",
-            )
-
-        # 고정값 입력
-        if selected == _SPECIAL_CONSTANT:
-            existing_val = constant_values.get(tc, "")
-            st.text_input(
-                f"'{tc}' 고정값",
-                value=existing_val,
-                placeholder="항상 들어갈 값을 입력하세요",
-                key=f"const_input_{vendor_name}_{i}",
-            )
-
-        # 복사 원본 선택
-        if selected == _SPECIAL_COPY:
-            copy_src = reverse_copy.get(tc, "")
-            copy_options = [c for c in vendor_columns if c != tc]
-            copy_default = copy_options.index(copy_src) if copy_src in copy_options else 0
-            st.selectbox(
-                f"'{tc}'에 복사할 칼럼",
-                options=copy_options,
-                index=copy_default,
-                key=f"copy_input_{vendor_name}_{i}",
-            )
-
-    # 저장 / 초기화 버튼
-    st.divider()
-    btn_col1, btn_col2 = st.columns(2)
-    with btn_col1:
-        if st.button("매핑 저장", key=f"save_mapping_{vendor_name}", type="primary", use_container_width=True):
-            _save_mapping_from_selectboxes(vendor, vendor_name, vendor_columns, source_name)
-    with btn_col2:
-        if st.button("매핑 초기화", key="mapping_reset_btn", use_container_width=True):
-            st.session_state["confirm_reset"] = True
-            st.rerun()
-
-    # 초기화 확인
-    if st.session_state.get("confirm_reset"):
-        st.warning(f"**{vendor_name}**의 매핑을 모두 초기화하시겠습니까?")
-        confirm_col1, confirm_col2 = st.columns(2)
-        with confirm_col1:
-            if st.button("초기화 확인", key="confirm_reset_yes", type="primary", use_container_width=True):
-                update_vendor_in_config(vendor["id"], {
-                    "rename_map": {},
-                    "constant_values": {},
-                    "copy_map": {},
-                })
+    # 업체 양식 파일 업로드
+    elif action == "upload_target":
+        file_data = result.get("target_file")
+        if file_data:
+            columns, filename = _save_uploaded_file(file_data, vendor_name, "target")
+            if columns and filename:
+                updates = {"form_file": filename, "target_columns": columns}
+                update_vendor_in_config(vendor_id, updates)
                 reload_config()
-                _remove_vendor_from_mapping_config(vendor_name)
-                st.session_state["confirm_reset"] = False
-                st.success(f"'{vendor_name}' 매핑이 초기화되었습니다.")
-                st.rerun()
-        with confirm_col2:
-            if st.button("취소", key="confirm_reset_no", use_container_width=True):
-                st.session_state["confirm_reset"] = False
                 st.rerun()
 
+    # 매핑 저장
+    elif action == "save":
+        mapping = result.get("mapping", {})
+        new_rename_map = mapping.get("rename_map", {})
+        new_constant_values = mapping.get("constant_values", {})
+        new_copy_map = mapping.get("copy_map", {})
 
-def _save_mapping_from_selectboxes(vendor, vendor_name, vendor_columns, source_name):
-    """selectbox 값들을 파싱하여 매핑을 저장합니다."""
-    new_rename_map = {}
-    new_constant_values = {}
-    new_copy_map = {}
+        # 파일 업로드가 함께 온 경우 처리
+        source_file = result.get("source_file")
+        target_file = result.get("target_file")
 
-    for i, tc in enumerate(vendor_columns):
-        selected = st.session_state.get(f"mapping_select_{vendor_name}_{i}", _SPECIAL_UNMAPPED)
+        if target_file:
+            columns, filename = _save_uploaded_file(target_file, vendor_name, "target")
+            if columns and filename:
+                update_vendor_in_config(vendor_id, {
+                    "form_file": filename,
+                    "target_columns": columns,
+                })
 
-        if selected == _SPECIAL_UNMAPPED:
-            continue
-        elif selected == _SPECIAL_CONSTANT:
-            val = st.session_state.get(f"const_input_{vendor_name}_{i}", "")
-            if val.strip():
-                new_constant_values[tc] = val.strip()
-        elif selected == _SPECIAL_COPY:
-            copy_src = st.session_state.get(f"copy_input_{vendor_name}_{i}", "")
-            if copy_src:
-                new_copy_map[copy_src] = tc
-        else:
-            new_rename_map[selected] = tc
+        if source_file:
+            columns, _ = _save_uploaded_file(source_file, vendor_name, "source")
+            if columns:
+                st.session_state[source_col_key] = columns
 
-    # mapping_config.json 갱신 (원본 파일 업로드 시에만)
-    if source_name:
-        mapping_config = _load_mapping_config()
-        mapping_config.setdefault("source_types", {})
-        if source_name not in mapping_config["source_types"]:
-            mapping_config["source_types"][source_name] = {}
-        mapping_config["source_types"][source_name].setdefault("vendor_mappings", {})
-        mapping_config["source_types"][source_name]["vendor_mappings"][vendor_name] = {
-            "column_map": dict(new_rename_map),
-            "constant_values": dict(new_constant_values),
-        }
-        _save_mapping_config(mapping_config)
+        # vendor_config.json 갱신
+        try:
+            update_vendor_in_config(vendor_id, {
+                "rename_map": dict(new_rename_map),
+                "constant_values": dict(new_constant_values),
+                "copy_map": dict(new_copy_map),
+            })
+            reload_config()
+        except Exception as e:
+            logger.error(f"매핑 저장 실패: {e}")
 
-    # vendor_config.json 갱신
-    try:
-        update_vendor_in_config(vendor["id"], {
-            "rename_map": dict(new_rename_map),
-            "constant_values": dict(new_constant_values),
-            "copy_map": dict(new_copy_map),
+        total = len(new_rename_map) + len(new_constant_values) + len(new_copy_map)
+        st.success(f"'{vendor_name}' 매핑이 저장되었습니다! ({total}개)")
+        st.rerun()
+
+    # 매핑 초기화
+    elif action == "reset":
+        update_vendor_in_config(vendor_id, {
+            "rename_map": {},
+            "constant_values": {},
+            "copy_map": {},
         })
         reload_config()
-    except Exception:
-        pass
-
-    total = len(new_rename_map) + len(new_constant_values) + len(new_copy_map)
-    st.success(f"'{vendor_name}' 매핑이 저장되었습니다! ({total}개)")
-    st.rerun()
+        _remove_vendor_from_mapping_config(vendor_name)
+        st.success(f"'{vendor_name}' 매핑이 초기화되었습니다.")
+        st.rerun()
 
 
 def _remove_vendor_from_mapping_config(vendor_name):
