@@ -12,22 +12,19 @@ import glob as glob_mod
 # ── 상수 ──
 REFERENCE_DIR = os.path.join("data", "정산", "참조")
 SHEET_NAME = "365건강농산"
-PRICE_CODE_COL = "품번코드"
+PRICE_CODE_COL = "약어"
 PRICE_VALUE_COL = "매입가"
-INPUT_CODE_COL = "품번코드(필수)"
+INPUT_CODE_COL = "상품약어"
 INPUT_QTY_COL = "수량"
 OUTPUT_PRICE_COL = "농협 매입가"
 OUTPUT_TOTAL_COL = "누계"
 
 
 def _normalize_code(val):
-    """품번코드를 정수 문자열로 통일"""
+    """매칭 키를 문자열로 통일"""
     if pd.isna(val):
         return None
-    try:
-        return str(int(float(val)))
-    except (ValueError, TypeError):
-        return str(val).strip()
+    return str(val).strip()
 
 
 def _find_reference_file():
