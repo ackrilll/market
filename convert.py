@@ -23,6 +23,7 @@ from customize_file import get_customize_config, apply_customization
 from vendor_manager import render_vendor_tab
 from order_mapping import render_mapping_tab
 from preview_tab import render_preview_tab
+from settlement_tab import render_settlement_tab
 
 def create_excel_buffer(df, company_name):
     """엑셀 파일을 생성하고 스타일을 적용하여 바이너리 데이터를 반환하는 공통 함수"""
@@ -910,7 +911,7 @@ def main():
         # 네비게이션 메뉴
         menu = st.radio(
             "메뉴",
-            ["주문서 변환", "업체 관리", "매핑 관리", "변환 미리보기"],
+            ["주문서 변환", "업체 관리", "매핑 관리", "변환 미리보기", "정산"],
             label_visibility="collapsed",
         )
 
@@ -925,6 +926,8 @@ def main():
         render_mapping_tab()
     elif menu == "변환 미리보기":
         render_preview_tab()
+    elif menu == "정산":
+        render_settlement_tab()
 
 
 
